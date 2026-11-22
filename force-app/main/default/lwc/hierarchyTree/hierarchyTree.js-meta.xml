@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+	<apiVersion>63.0</apiVersion>
+	<isExposed>true</isExposed>
+	<masterLabel>Hierarchy Tree</masterLabel>
+	<description>Draws any object with a lookup to itself as a tree. Names link to their records, any branch can be zoomed into, and a breadcrumb leads back out. Starts on built-in sample data; set Data source to Records to show real records.</description>
+	<targets>
+		<target>lightning__AppPage</target>
+		<target>lightning__HomePage</target>
+		<target>lightning__RecordPage</target>
+		<target>lightningCommunity__Page</target>
+		<target>lightningCommunity__Default</target>
+	</targets>
+	<targetConfigs>
+		<targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
+			<property name="cardTitle" type="String" label="Card title" default="Hierarchy" />
+			<property name="iconName" type="String" label="Icon" default="standard:hierarchy" description="An SLDS icon name, for example standard:hierarchy." />
+			<property name="hierarchySource" type="String" label="Data source" datasource="Sample,Records" default="Sample" description="Sample shows a built-in tree with no setup. Records reads the object named below." />
+			<property name="hierarchyObjectApiName" type="String" label="Object API name" default="Account" description="The object to draw. It needs a lookup to itself." />
+			<property name="parentFieldApiName" type="String" label="Parent field API name" default="ParentId" description="The object's lookup to itself." />
+			<property name="labelFieldApiName" type="String" label="Name field API name" default="Name" />
+			<property name="typeFieldApiName" type="String" label="Type field API name" default="Type" description="Optional. Shown as a badge on each row; a picklist shows its label." />
+			<property name="activeFieldApiName" type="String" label="Active field API name" description="Optional. A checkbox; rows where it is false are muted." />
+			<property name="hideInactive" type="Boolean" label="Hide inactive records" default="false" description="Hides inactive records and everything below them." />
+			<property name="rootRecordId" type="String" label="Top record Id" description="Optional. The view starts zoomed in on this record." />
+			<property name="isRootLocked" type="Boolean" label="Lock to the top record" default="false" description="Viewers cannot go above the top record. A view setting, not security: sharing decides what users can see." />
+			<property name="shouldStartAtRecord" type="Boolean" label="Start at the current record" default="false" description="On a record page, start zoomed in on the record being viewed." />
+			<property name="expandDepth" type="Integer" label="Levels open at start" default="2" min="0" max="20" />
+			<property name="hideSearch" type="Boolean" label="Hide the search box" default="false" />
+		</targetConfig>
+		<targetConfig targets="lightningCommunity__Default">
+			<property name="cardTitle" type="String" label="Card title" default="Hierarchy" />
+			<property name="iconName" type="String" label="Icon" default="standard:hierarchy" description="An SLDS icon name, for example standard:hierarchy." />
+			<property name="hierarchySource" type="String" label="Data source" datasource="Sample,Records" default="Sample" description="Sample shows a built-in tree with no setup. Records reads the object named below." />
+			<property name="hierarchyObjectApiName" type="String" label="Object API name" default="Account" description="The object to draw. It needs a lookup to itself." />
+			<property name="parentFieldApiName" type="String" label="Parent field API name" default="ParentId" description="The object's lookup to itself." />
+			<property name="labelFieldApiName" type="String" label="Name field API name" default="Name" />
+			<property name="typeFieldApiName" type="String" label="Type field API name" default="Type" description="Optional. Shown as a badge on each row; a picklist shows its label." />
+			<property name="activeFieldApiName" type="String" label="Active field API name" description="Optional. A checkbox; rows where it is false are muted." />
+			<property name="hideInactive" type="Boolean" label="Hide inactive records" default="false" description="Hides inactive records and everything below them." />
+			<property name="rootRecordId" type="String" label="Top record Id" description="Optional. The view starts zoomed in on this record." />
+			<property name="isRootLocked" type="Boolean" label="Lock to the top record" default="false" description="Viewers cannot go above the top record. A view setting, not security: sharing decides what users can see." />
+			<property name="shouldStartAtRecord" type="Boolean" label="Start at the current record" default="false" description="On a record page, start zoomed in on the record being viewed." />
+			<property name="expandDepth" type="Integer" label="Levels open at start" default="2" min="0" max="20" />
+			<property name="hideSearch" type="Boolean" label="Hide the search box" default="false" />
+			<property name="recordId" type="String" label="Record Id" default="{!Route.recordId}" description="The record the site page is routed to. {!Route.recordId} on an LWR site; use {!recordId} on an Aura site." />
+		</targetConfig>
+	</targetConfigs>
+</LightningComponentBundle>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+	<description>Two Hierarchy Tree instances for checking the component in an org: sample data, and Accounts by ParentId.</description>
+	<flexiPageRegions>
+		<itemInstances>
+			<componentInstance>
+				<componentInstanceProperties>
+					<name>cardTitle</name>
+					<value>Sample hierarchy</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchySource</name>
+					<value>Sample</value>
+				</componentInstanceProperties>
+				<componentName>hierarchyTree</componentName>
+				<identifier>hierarchyTreeSample</identifier>
+			</componentInstance>
+		</itemInstances>
+		<itemInstances>
+			<componentInstance>
+				<componentInstanceProperties>
+					<name>cardTitle</name>
+					<value>Account hierarchy</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchySource</name>
+					<value>Records</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchyObjectApiName</name>
+					<value>Account</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>parentFieldApiName</name>
+					<value>ParentId</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>labelFieldApiName</name>
+					<value>Name</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>typeFieldApiName</name>
+					<value>Type</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>expandDepth</name>
+					<value>2</value>
+				</componentInstanceProperties>
+				<componentName>hierarchyTree</componentName>
+				<identifier>hierarchyTreeAccounts</identifier>
+			</componentInstance>
+		</itemInstances>
+		<name>main</name>
+		<type>Region</type>
+	</flexiPageRegions>
+	<masterLabel>Hierarchy Tree Demo</masterLabel>
+	<template>
+		<name>flexipage:defaultAppHomeTemplate</name>
+	</template>
+	<type>AppPage</type>
+</FlexiPage>

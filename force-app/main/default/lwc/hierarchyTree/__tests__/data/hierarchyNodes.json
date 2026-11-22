@@ -1,0 +1,12 @@
+[
+  { "recordId": "n01", "parentId": null, "label": "Global", "typeLabel": "Global", "isActive": true },
+  { "recordId": "n02", "parentId": "n01", "label": "Americas", "typeLabel": "Region", "isActive": true },
+  { "recordId": "n03", "parentId": "n01", "label": "EMEA", "typeLabel": "Region", "isActive": true },
+  { "recordId": "n04", "parentId": "n02", "label": "United States", "typeLabel": "Country", "isActive": true },
+  { "recordId": "n05", "parentId": "n02", "label": "Canada", "typeLabel": "Country", "isActive": true },
+  { "recordId": "n06", "parentId": "n03", "label": "Germany", "typeLabel": "Country", "isActive": true },
+  { "recordId": "n07", "parentId": "n04", "label": "Austin Office", "typeLabel": "Office", "isActive": false },
+  { "recordId": "n08", "parentId": "n04", "label": "Boston Office", "typeLabel": "Office", "isActive": true },
+  { "recordId": "n09", "parentId": "n06", "label": "Berlin Office", "typeLabel": "Office", "isActive": true },
+  { "recordId": "n10", "parentId": "n01", "label": "APAC", "typeLabel": "Region", "isActive": true }
+]

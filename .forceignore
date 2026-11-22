@@ -1,0 +1,14 @@
+# LWC configuration files
+**/jsconfig.json
+**/.eslintrc.json
+
+# Jest tests and fixtures never deploy
+**/__tests__/**
+
+# Jest mocks of base components (jest.config.js moduleNameMapper) never deploy
+**/jest-mocks/**
+
+# Local-only
+.sfdx
+.sf
+package.xml

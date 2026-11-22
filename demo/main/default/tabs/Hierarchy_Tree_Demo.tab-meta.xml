@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+	<description>Demo page with two Hierarchy Tree instances: the built-in sample data, and Accounts.</description>
+	<flexiPage>Hierarchy_Tree_Demo</flexiPage>
+	<label>Hierarchy Tree Demo</label>
+	<motif>Custom78: Map</motif>
+</CustomTab>
