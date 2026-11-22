@@ -8,8 +8,9 @@ Record pages and on Experience Cloud sites (LWR and Aura).
 It ships as a generic template. Out of the box it shows a built-in sample tree and needs no objects or data. Point it at
 a real object by setting four design attributes, or by changing their defaults (see [Fill in your schema](#fill-in-your-schema)).
 
-**State, 2026-11-22.** Lint is clean, and Jest passes 67 tests with coverage above its floors. Org verification is
-recorded under [What is proven, and where](#what-is-proven-and-where).
+**State, 2026-11-22.** Lint is clean and Jest passes 67 tests with coverage above its floors. In a scratch org,
+everything deploys and the 17 Apex tests pass. The look in Lightning Experience and on an LWR site is still to be
+checked by a person; see [What is proven, and where](#what-is-proven-and-where).
 
 <!-- Screenshot slot: capture the component in an org, save it as docs/screenshot.png, and replace this line with
      ![Hierarchy Tree](docs/screenshot.png) -->
@@ -189,13 +190,15 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 - truncation;
 - every refusal, including the allow list.
 
-**Only an org proves**, checked in a scratch org as recorded below:
+**Only an org proves**, checked in a scratch org on 2026-11-22 (Developer edition, deployed at API 63.0) as recorded
+below:
 
 | # | Claim | Status |
 |---|---|---|
-| 1 | The bundle, classes, permission sets, demo page and tab deploy | pending |
-| 2 | Apex tests pass in an org | pending |
-| 3 | Names link to and open record pages in Lightning Experience | pending |
+| 1 | The bundle, classes, permission sets, demo page and tab deploy | RUN: all 13 source files deployed on the first attempt |
+| 2 | Apex tests pass in an org | RUN: 17 of 17 pass, 96% coverage of the controller. The uncovered lines are the query-failure catch and the unreadable object and field paths |
+| 3 | The controller reads a real hierarchy | RUN: after the seed script, Records mode on Account returned 32 nodes (31 seeded plus the scratch org's own Account) and 2 roots |
+| 3a | Names link to and open record pages in Lightning Experience | for a person to check on the demo tab |
 | 4 | The `datasource` picklist shows in Experience Builder | UNVERIFIED |
 | 5 | `NavigationMixin.GenerateUrl` and `Navigate` reach record pages on an LWR site | UNVERIFIED |
 | 6 | The component's own CSS renders the same inside an LWR site's native shadow DOM | UNVERIFIED |
