@@ -13,8 +13,11 @@ everything deploys and the 27 Apex tests pass. All three layouts were rendered f
 harness. The look in Lightning Experience and on an LWR site is still to be checked by a person; see
 [What is proven, and where](#what-is-proven-and-where).
 
-<!-- Screenshot slot: capture the component in an org, save it as docs/screenshot.png, and replace this line with
-     ![Hierarchy Tree](docs/screenshot.png) -->
+![Hierarchy Tree design options](docs/previews/00-overview.png)
+
+Each layout also has its own image in [docs/previews](docs/previews/), dated 2026-11-23. They were rendered from this source
+with sample data outside Salesforce, so the card frame, buttons, search box and icons are stand-ins for the Lightning
+ones. A capture from an org can replace them later.
 
 ## What it does
 
