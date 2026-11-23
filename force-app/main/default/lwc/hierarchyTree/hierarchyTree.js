@@ -28,6 +28,8 @@ const DATA_SOURCES = [DATA_SOURCE_SAMPLE, DATA_SOURCE_RECORDS];
 const DEFAULT_EXPAND_DEPTH = 2;
 const MAX_EXPAND_DEPTH = 20;
 const MAX_RENDERED_ROWS = 500;
+const BRANCH_COLOR_COUNT = 6;
+const DEEPEST_STYLED_LEVEL = 3;
 const RECORD_PAGE_TYPE = 'standard__recordPage';
 
 // Every string the component shows, in one place, ready to move to Custom Labels. {0} and {1} are filled in order.
@@ -101,6 +103,7 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 	@api typeFieldApiName = 'Type';
 	@api activeFieldApiName = '';
 	@api hideSearch = false;
+	@api hideBranchColors = false;
 
 	/** 'Sample' (the default; any unknown value falls back to it) or 'Records'. */
 	@api
@@ -276,6 +279,10 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 
 	get searchPlaceholder() {
 		return formatLabel(LABELS.searchPlaceholder, this._objectPluralLabel);
+	}
+
+	get treeClass() {
+		return toBoolean(this.hideBranchColors) ? 'tree tree_plain' : 'tree';
 	}
 
 	get rows() {
@@ -693,6 +700,11 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		}
 		if (row.isMatch) {
 			classNames.push('tree-row_match');
+		}
+		// Names get smaller down to level 3; every row under a level-2 row wears that branch's color.
+		classNames.push('tree-row_level-' + Math.min(row.level, DEEPEST_STYLED_LEVEL));
+		if (row.branchIndex >= 0) {
+			classNames.push('tree-row_branch', 'tree-row_branch-' + ((row.branchIndex % BRANCH_COLOR_COUNT) + 1));
 		}
 		const guides = [];
 		for (let i = 1; i < row.level; i++) {

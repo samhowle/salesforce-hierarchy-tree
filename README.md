@@ -8,7 +8,7 @@ Record pages and on Experience Cloud sites (LWR and Aura).
 It ships as a generic template. Out of the box it shows a built-in sample tree and needs no objects or data. Point it at
 a real object by setting four design attributes, or by changing their defaults (see [Fill in your schema](#fill-in-your-schema)).
 
-**State, 2026-11-22.** Lint is clean and Jest passes 67 tests with coverage above its floors. In a scratch org,
+**State, 2026-11-22.** Lint is clean and Jest passes 72 tests with coverage above its floors. In a scratch org,
 everything deploys and the 17 Apex tests pass. The look in Lightning Experience and on an LWR site is still to be
 checked by a person; see [What is proven, and where](#what-is-proven-and-where).
 
@@ -26,6 +26,11 @@ checked by a person; see [What is proven, and where](#what-is-proven-and-where).
   selected row. When zoomed in:
   - a breadcrumb names every level above the view, and each crumb climbs back to that level;
   - a banner reads "Section view: showing ‹name› and the N records below it" and has a *Show full hierarchy* button.
+- **Levels and branches.** Names get smaller down the levels of the view: the top row is largest and bold, its
+  children are semibold, and everything below is body text. Each child of the top row starts a branch, and every
+  row in that branch carries the same colored stripe at its left edge, so it's clear at a glance where a row
+  belongs. Colors are counted from the view, so zooming in gives the new top row's children their own colors. Six
+  colors repeat in order; *Hide branch colors* turns the stripes off.
 - **Badges and counts.** An optional type field (a picklist shows its label) appears as a badge. Each parent shows
   how many records sit below it at any depth ("12 below").
 - **Search.** Filters the current view to matching names, keeps the path down to each match, and lets a matched
@@ -139,6 +144,7 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 | Start at the current record | off | On a record page, start zoomed in on that record |
 | Levels open at start | 2 | 0 to 20, counted from the view's top |
 | Hide the search box | off | |
+| Hide branch colors | off | Turns off the colored stripe that marks each row's branch |
 | Record Id (sites only) | `{!Route.recordId}` | The routed record, highlighted and revealed |
 
 ## How it works
@@ -161,6 +167,9 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 3. **Rows are drawn flat.** The template renders only the open part of the view as one list with ARIA levels, which
    avoids a recursive component. At most 500 rows are drawn at once; past that the tree says how many it held back.
    Record URLs are generated only for rows on screen.
+4. **Styling.** Structural CSS lives in `hierarchyTree.css`, and every color is a styling hook with a fallback. The
+   six branch colors can be set from outside the component with `--hierarchy-tree-branch-color-1` to `-6`, for
+   example in a site's head markup or theme CSS.
 
 ## Security
 
@@ -174,11 +183,12 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 
 ## What is proven, and where
 
-**Jest** (67 tests, `npm test`) proves the client side. Coverage is about 94% for `hierarchyTree.js` and 99% for
+**Jest** (72 tests, `npm test`) proves the client side. Coverage is about 94% for `hierarchyTree.js` and 99% for
 `hierarchyTreeModel.js`.
-- The model covers sorting, orphans, cycles, 15- and 18-character Ids, counts, pruning, search and the row cap.
-- The component covers rendering, ARIA attributes, zoom, breadcrumbs, the locked branch, search, keyboard moves, link
-  clicks and record-page mode.
+- The model covers sorting, orphans, cycles, 15- and 18-character Ids, counts, pruning, search, branch numbering
+  and the row cap.
+- The component covers rendering, ARIA attributes, zoom, breadcrumbs, the locked branch, search, level and branch classes,
+  keyboard moves, link clicks and record-page mode.
 - Apex is mocked.
 
 **Apex tests** (17 methods) prove the controller in an org:

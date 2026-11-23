@@ -27,6 +27,7 @@
 			<property name="shouldStartAtRecord" type="Boolean" label="Start at the current record" default="false" description="On a record page, start zoomed in on the record being viewed." />
 			<property name="expandDepth" type="Integer" label="Levels open at start" default="2" min="0" max="20" />
 			<property name="hideSearch" type="Boolean" label="Hide the search box" default="false" />
+			<property name="hideBranchColors" type="Boolean" label="Hide branch colors" default="false" description="Turns off the colored stripe that marks which branch each row belongs to." />
 		</targetConfig>
 		<targetConfig targets="lightningCommunity__Default">
 			<property name="cardTitle" type="String" label="Card title" default="Hierarchy" />
@@ -43,6 +44,7 @@
 			<property name="shouldStartAtRecord" type="Boolean" label="Start at the current record" default="false" description="On a record page, start zoomed in on the record being viewed." />
 			<property name="expandDepth" type="Integer" label="Levels open at start" default="2" min="0" max="20" />
 			<property name="hideSearch" type="Boolean" label="Hide the search box" default="false" />
+			<property name="hideBranchColors" type="Boolean" label="Hide branch colors" default="false" description="Turns off the colored stripe that marks which branch each row belongs to." />
 			<property name="recordId" type="String" label="Record Id" default="{!Route.recordId}" description="The record the site page is routed to. {!Route.recordId} on an LWR site; use {!recordId} on an Aura site." />
 		</targetConfig>
 	</targetConfigs>

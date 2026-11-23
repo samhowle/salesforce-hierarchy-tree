@@ -113,7 +113,7 @@
 				</template>
 
 				<template lwc:if={hasRows}>
-					<ul class="tree" role="tree" aria-label={treeLabel} onkeydown={onTreeKeyDown} data-id="tree">
+					<ul class={treeClass} role="tree" aria-label={treeLabel} onkeydown={onTreeKeyDown} data-id="tree">
 						<template for:each={rows} for:item="row">
 							<li
 								key={row.key}

@@ -2,6 +2,7 @@ import {
 	BLANK_LABEL,
 	buildHierarchyIndex,
 	getAncestorKeys,
+	getBranchIndexMap,
 	getBranchKeys,
 	getDescendantCounts,
 	getExpandableKeys,
@@ -249,6 +250,38 @@ describe('hierarchyTreeModel', () => {
 				currentRecordKey: 'n05'
 			});
 			expect(rows.filter(row => row.isCurrentRecord).map(row => row.label)).toEqual(['Canada']);
+		});
+
+		it('numbers the branches of a view in order, across every view root', () => {
+			expect([...getBranchIndexMap(index, ['n01']).entries()]).toEqual([
+				['n02', 0],
+				['n10', 1],
+				['n03', 2]
+			]);
+			expect([...getBranchIndexMap(index, ['n02', 'n03', 'unknown']).entries()]).toEqual([
+				['n05', 0],
+				['n04', 1],
+				['n06', 2]
+			]);
+		});
+
+		it('gives each row the branch index of the level-2 row above it, and the view root none', () => {
+			const { rows } = getVisibleRows(index, {
+				viewRootKeys: ['n01'],
+				expandedKeySet: new Set(getExpandableKeys(index, ['n01'], null))
+			});
+			const branchByLabel = Object.fromEntries(rows.map(row => [row.label, row.branchIndex]));
+			expect(branchByLabel).toMatchObject({ Global: -1, Americas: 0, 'Boston Office': 0, APAC: 1, EMEA: 2 });
+			expect(branchByLabel['Berlin Office']).toBe(2);
+		});
+
+		it('keeps a branch index while a filter hides the branches before it', () => {
+			const { rows } = getVisibleRows(index, {
+				viewRootKeys: ['n01'],
+				expandedKeySet: new Set(['n01', 'n03']),
+				filterKeySet: new Set(['n01', 'n03', 'n06'])
+			});
+			expect(rows.map(row => row.branchIndex)).toEqual([-1, 2, 2]);
 		});
 
 		it('stops at the row cap and counts what it held back', () => {

@@ -286,7 +286,23 @@ export function getSearchKeys(index, viewRootKeys, searchTerm) {
 
 // Rows
 /**
+ * Numbers the branches of a view: each child of a view root, in order, across all the view roots. Every child is
+ * numbered, shown or not, so a branch keeps its number while a search hides its neighbours.
+ * @return {Map} child key → branch index from 0
+ */
+export function getBranchIndexMap(index, viewRootKeys) {
+	const branchIndexMap = new Map();
+	viewRootKeys
+		.filter(key => index.nodeMap.has(key))
+		.forEach(key => {
+			getChildKeys(index, key).forEach(childKey => branchIndexMap.set(childKey, branchIndexMap.size));
+		});
+	return branchIndexMap;
+}
+
+/**
  * Depth-first walk of the open part of the view. Positions in a set count only the siblings that are shown.
+ * Each row carries the branch index of the level-2 row it sits under; view roots have -1.
  * @param {Object} options { viewRootKeys, expandedKeySet, filterKeySet (null shows all), matchKeySet,
  *        currentRecordKey, countMap, maxRows }
  * @return {Object} { rows, hiddenRowCount }: rows past maxRows are counted, not returned
@@ -297,16 +313,18 @@ export function getVisibleRows(index, options) {
 	const countMap = options.countMap || new Map();
 	const maxRows = options.maxRows > 0 ? options.maxRows : Number.MAX_SAFE_INTEGER;
 	const isShown = key => index.nodeMap.has(key) && (!filterKeySet || filterKeySet.has(key));
+	const branchIndexMap = getBranchIndexMap(index, options.viewRootKeys);
 	const rows = [];
 	let hiddenRowCount = 0;
 	const pending = [];
-	const pushLevel = (keys, level) => {
+	const pushLevel = (keys, level, parentBranchIndex) => {
 		const shownKeys = keys.filter(isShown);
 		for (let i = shownKeys.length - 1; i >= 0; i--) {
-			pending.push({ key: shownKeys[i], level, posInSet: i + 1, setSize: shownKeys.length });
+			const branchIndex = level === 2 ? branchIndexMap.get(shownKeys[i]) : parentBranchIndex;
+			pending.push({ key: shownKeys[i], level, posInSet: i + 1, setSize: shownKeys.length, branchIndex });
 		}
 	};
-	pushLevel(options.viewRootKeys, 1);
+	pushLevel(options.viewRootKeys, 1, -1);
 	while (pending.length > 0) {
 		const item = pending.pop();
 		const entry = index.nodeMap.get(item.key);
@@ -322,6 +340,7 @@ export function getVisibleRows(index, options) {
 				typeLabel: entry.typeLabel,
 				isActive: entry.isActive,
 				level: item.level,
+				branchIndex: item.branchIndex,
 				posInSet: item.posInSet,
 				setSize: item.setSize,
 				hasChildren,
@@ -334,7 +353,7 @@ export function getVisibleRows(index, options) {
 			hiddenRowCount++;
 		}
 		if (isExpanded) {
-			pushLevel(childKeys, item.level + 1);
+			pushLevel(childKeys, item.level + 1, item.branchIndex);
 		}
 	}
 	return { rows, hiddenRowCount };

@@ -164,6 +164,31 @@ describe('c-hierarchy-tree', () => {
 			expect(items.filter(item => item.getAttribute('tabindex') === '0')).toHaveLength(1);
 		});
 
+		it('sizes names by level and marks each branch with its own color', async () => {
+			const element = await mountWithData({ expandDepth: 5 });
+			const classesOf = label => itemFor(element, label).classList;
+			expect(classesOf('Global').contains('tree-row_level-1')).toBe(true);
+			expect(classesOf('Global').contains('tree-row_branch')).toBe(false);
+			expect(classesOf('Americas').contains('tree-row_level-2')).toBe(true);
+			expect(classesOf('Americas').contains('tree-row_branch-1')).toBe(true);
+			expect(classesOf('Boston Office').contains('tree-row_level-3')).toBe(true);
+			expect(classesOf('Boston Office').contains('tree-row_branch-1')).toBe(true);
+			expect(classesOf('APAC').contains('tree-row_branch-2')).toBe(true);
+			expect(classesOf('Berlin Office').contains('tree-row_branch-3')).toBe(true);
+			expect(byDataId(element, 'tree').classList.contains('tree_plain')).toBe(false);
+		});
+
+		it('numbers the branches again from the view after a zoom, and can drop the colors', async () => {
+			const element = await mountWithData({ expandDepth: 5 });
+			await zoomInto(element, 'Americas');
+			expect(itemFor(element, 'Americas').classList.contains('tree-row_level-1')).toBe(true);
+			expect(itemFor(element, 'Americas').classList.contains('tree-row_branch')).toBe(false);
+			expect(itemFor(element, 'United States').classList.contains('tree-row_branch-2')).toBe(true);
+			element.hideBranchColors = true;
+			await flush();
+			expect(byDataId(element, 'tree').classList.contains('tree_plain')).toBe(true);
+		});
+
 		it('draws sample names as plain text, not links', async () => {
 			const element = await mountWithData();
 			expect(allByDataId(element, 'name-link')).toHaveLength(0);
