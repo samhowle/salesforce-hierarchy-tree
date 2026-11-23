@@ -1,0 +1,176 @@
+/* The card's color comes from --hierarchy-tree-card-color, which c-hierarchy-tree sets on this element per branch.
+   Every other color is a styling hook with a fallback, as in the parent. */
+:host {
+	display: block;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.1875rem;
+	box-sizing: border-box;
+	width: 12rem;
+	padding: 0.75rem 0.625rem 0.625rem;
+	border: 1px solid var(--slds-g-color-border-1, #dddbda);
+	border-top: 3px solid var(--hierarchy-tree-card-color, #032d60);
+	border-radius: 0.5rem;
+	background: var(--slds-g-color-surface-container-1, #ffffff);
+	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.06);
+	color: var(--dxp-g-root-contrast, var(--slds-g-color-on-surface-3, #181818));
+	text-align: center;
+}
+
+.card:focus {
+	outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+	outline-offset: 1px;
+}
+
+.card_root {
+	width: 13.5rem;
+}
+
+.card_current {
+	background: var(--slds-g-color-accent-container-1, #eef4ff);
+}
+
+.card__avatar {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 2.75rem;
+	height: 2.75rem;
+	margin-bottom: 0.25rem;
+	border-radius: 50%;
+	background: var(--hierarchy-tree-card-color, #032d60);
+	color: #ffffff;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+}
+
+.card__avatar_long {
+	font-size: 0.625rem;
+	letter-spacing: 0;
+}
+
+.card_root .card__avatar {
+	width: 3.25rem;
+	height: 3.25rem;
+	font-size: 0.8125rem;
+}
+
+.card_inactive .card__avatar {
+	opacity: 0.55;
+}
+
+.card__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+}
+
+.card__name {
+	font-size: 0.875rem;
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.card_root .card__name {
+	font-size: 1rem;
+}
+
+.card__name a {
+	color: var(--dxp-s-link-text-color, var(--slds-g-color-accent-1, #0b5cab));
+	text-decoration: none;
+}
+
+.card__name a:hover {
+	text-decoration: underline;
+}
+
+.card_inactive .card__name {
+	font-style: italic;
+	color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.card__subtitle,
+.card__detail,
+.card__inactive,
+.card__foot {
+	font-size: 0.75rem;
+	color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.card__detail {
+	color: var(--slds-g-color-on-surface-2, #444444);
+}
+
+.card__foot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	margin-top: 0.125rem;
+}
+
+.card__zoom {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: 0;
+	border-radius: 0.25rem;
+	background: transparent;
+	cursor: pointer;
+}
+
+.card__zoom:hover {
+	background: var(--slds-g-color-surface-container-3, #e5e5e5);
+}
+
+/* Compact: avatar on the left, text and foot beside it. Used for the stacked third level and for narrow spaces. */
+.card_compact {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	grid-template-areas: 'avatar text' 'avatar foot';
+	align-items: center;
+	column-gap: 0.5rem;
+	row-gap: 0;
+	width: 100%;
+	padding: 0.5rem;
+	border-top-width: 1px;
+	border-left: 3px solid var(--hierarchy-tree-card-color, #032d60);
+	text-align: left;
+}
+
+.card_compact .card__avatar {
+	grid-area: avatar;
+	width: 2rem;
+	height: 2rem;
+	margin: 0;
+	font-size: 0.625rem;
+}
+
+.card_compact .card__avatar_long {
+	font-size: 0.5625rem;
+}
+
+.card_compact .card__text {
+	grid-area: text;
+}
+
+.card_compact .card__name {
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.card_compact .card__foot {
+	grid-area: foot;
+	justify-content: flex-start;
+	margin: 0;
+}

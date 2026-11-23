@@ -1,6 +1,7 @@
 /* hierarchyTree.js  ***************************************************************************************************
- * Draws any self-referencing hierarchy as a tree. Names link to their records, any branch can be zoomed into with a
- * breadcrumb back out, and a section banner says when the view is part of the hierarchy rather than all of it.
+ * Draws any self-referencing hierarchy as a tree, a tree with columns, or an org chart of cards. Names link to their
+ * records, any branch can be zoomed into with a breadcrumb back out, and a section banner says when the view is part
+ * of the hierarchy rather than all of it. Columns and the chart fall back to narrow forms in a narrow space.
  * ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
  * @test		__tests__/hierarchyTree.test.js, __tests__/hierarchyTreeModel.test.js
  *********************************************************************************************************************/
@@ -11,6 +12,8 @@ import getHierarchy from '@salesforce/apex/HierarchyTreeController.getHierarchy'
 import {
 	buildHierarchyIndex,
 	getAncestorKeys,
+	getAvatarText,
+	getChartTree,
 	getDescendantCounts,
 	getExpandableKeys,
 	getIdKey,
@@ -30,6 +33,17 @@ const MAX_EXPAND_DEPTH = 20;
 const MAX_RENDERED_ROWS = 500;
 const BRANCH_COLOR_COUNT = 6;
 const DEEPEST_STYLED_LEVEL = 3;
+const LAYOUT_TREE = 'Tree';
+const LAYOUT_COLUMNS = 'Columns';
+const LAYOUT_ORG_CHART = 'Org chart';
+const LAYOUTS = [LAYOUT_TREE, LAYOUT_COLUMNS, LAYOUT_ORG_CHART];
+// Below this width, in pixels of the component itself, columns give way to the plain tree and the chart stacks.
+const NARROW_WIDTH = 640;
+const NUMERIC_TYPES = new Set(['currency', 'double', 'integer', 'long', 'percent']);
+const CARD_VARIANTS = ['root', 'branch', 'compact'];
+const MAX_CARD_DETAILS = 2;
+const MAX_COMPACT_CARD_DETAILS = 1;
+const SUBTITLE_SEPARATOR = ' · ';
 const RECORD_PAGE_TYPE = 'standard__recordPage';
 
 // Every string the component shows, in one place, ready to move to Custom Labels. {0} and {1} are filled in order.
@@ -37,6 +51,7 @@ const LABELS = {
 	allRecords: 'All {0}',
 	backToBranch: 'Back to {0}',
 	below: '{0} below',
+	belowColumn: 'Below',
 	breadcrumb: 'Hierarchy path',
 	collapse: 'Collapse {0}',
 	collapseAll: 'Collapse all',
@@ -52,6 +67,8 @@ const LABELS = {
 	lockedRootMissing: 'The top record set for this component was not found, or is not shared with you.',
 	matchCount: '{0} matches',
 	matchOne: '1 match',
+	nameColumn: 'Name',
+	no: 'No',
 	noMatches: 'No names match "{0}".',
 	refresh: 'Refresh',
 	sampleNotice: 'Showing sample data. Set Data source to Records to show real records.',
@@ -65,6 +82,7 @@ const LABELS = {
 	truncated: 'Showing the first {0} records only. Set a top record to see a smaller part of the hierarchy.',
 	unknownError: 'The hierarchy could not be loaded.',
 	viewingFull: 'Showing the full hierarchy.',
+	yes: 'Yes',
 	zoomIn: 'Zoom in on {0}',
 	zoomInSelected: 'Zoom in on the selected row'
 };
@@ -75,6 +93,21 @@ function formatLabel(template, ...values) {
 
 function toBoolean(value) {
 	return value === true || value === 'true';
+}
+
+// A checkbox column reads Yes or No; every other value arrives from Apex as display text.
+function getCellText(column, value) {
+	if (column && column.dataType === 'boolean') {
+		if (value === 'true') {
+			return LABELS.yes;
+		}
+		return value === 'false' ? LABELS.no : '';
+	}
+	return value || '';
+}
+
+function getCellClass(baseClass, column) {
+	return NUMERIC_TYPES.has(column.dataType) ? baseClass + ' tree-cell_number' : baseClass;
 }
 
 function getErrorMessage(error) {
@@ -104,6 +137,20 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 	@api activeFieldApiName = '';
 	@api hideSearch = false;
 	@api hideBranchColors = false;
+	/** Up to five comma-separated fields for the columns and the org-chart cards. */
+	@api columnFieldApiNames = '';
+	/** A short text field, such as a code, for the org-chart avatars. */
+	@api avatarFieldApiName = '';
+
+	/** 'Tree' (the default; any unknown value falls back to it), 'Columns' or 'Org chart'. */
+	@api
+	get layout() {
+		return this._layout;
+	}
+	set layout(value) {
+		this._layout = LAYOUTS.includes(value) ? value : LAYOUT_TREE;
+		this.refreshRows();
+	}
 
 	/** 'Sample' (the default; any unknown value falls back to it) or 'Records'. */
 	@api
@@ -176,6 +223,7 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 	}
 
 	_hierarchySource = DATA_SOURCE_SAMPLE;
+	_layout = LAYOUT_TREE;
 	_expandDepth = DEFAULT_EXPAND_DEPTH;
 	_hideInactive = false;
 	_rootRecordId = '';
@@ -200,7 +248,13 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 	_search = null;
 	_activeKey = '';
 	_rows = [];
+	_chartRoots = [];
 	_hiddenRowCount = 0;
+	_labelFieldLabel = '';
+	_typeFieldLabel = '';
+	_columns = [];
+	_isNarrow = false;
+	_resizeObserver = null;
 	_urlMap = new Map();
 	_pendingUrlKeySet = new Set();
 	_statusMessage = '';
@@ -213,7 +267,9 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		parentFieldApiName: '$parentFieldApiName',
 		labelFieldApiName: '$labelFieldApiName',
 		typeFieldApiName: '$typeFieldApiName',
-		activeFieldApiName: '$activeFieldApiName'
+		activeFieldApiName: '$activeFieldApiName',
+		columnFieldApiNames: '$columnFieldApiNames',
+		avatarFieldApiName: '$avatarFieldApiName'
 	})
 	wiredHierarchy(result) {
 		this._wiredResult = result;
@@ -226,15 +282,17 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 	}
 
 	renderedCallback() {
+		this.observeWidth();
 		if (this._focusKeyAfterRender) {
-			const item = this.template.querySelector('[role="treeitem"][data-key="' + this._focusKeyAfterRender + '"]');
+			const selector = this.isOrgChart ? 'c-hierarchy-tree-card' : '.tree-row';
+			const item = this.template.querySelector(selector + '[data-key="' + this._focusKeyAfterRender + '"]');
 			this._focusKeyAfterRender = '';
 			if (item) {
 				item.focus();
 			}
 		}
 		if (this._shouldScrollToRecord) {
-			const currentItem = this.template.querySelector('.tree-row_current');
+			const currentItem = this.template.querySelector('.tree-row_current, .chart-card_current');
 			if (currentItem) {
 				this._shouldScrollToRecord = false;
 				if (typeof currentItem.scrollIntoView === 'function') {
@@ -242,6 +300,29 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 				}
 			}
 		}
+	}
+
+	disconnectedCallback() {
+		if (this._resizeObserver) {
+			this._resizeObserver.disconnect();
+			this._resizeObserver = null;
+		}
+	}
+
+	// The width that matters is the component's own, not the window's: a narrow sidebar on a wide screen is narrow.
+	observeWidth() {
+		if (this._resizeObserver || typeof ResizeObserver !== 'function' || !this.refs.body) {
+			return;
+		}
+		this._resizeObserver = new ResizeObserver(entries => {
+			const width = entries.length > 0 ? entries[0].contentRect.width : 0;
+			const isNarrow = width > 0 && width < NARROW_WIDTH;
+			if (isNarrow !== this._isNarrow) {
+				this._isNarrow = isNarrow;
+				this.refreshRows();
+			}
+		});
+		this._resizeObserver.observe(this.refs.body);
 	}
 
 	// Template state
@@ -281,8 +362,80 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		return formatLabel(LABELS.searchPlaceholder, this._objectPluralLabel);
 	}
 
+	get isOrgChart() {
+		return this._layout === LAYOUT_ORG_CHART;
+	}
+
+	get isColumns() {
+		return this._layout === LAYOUT_COLUMNS && !this._isNarrow;
+	}
+
+	get showToolbar() {
+		return !this.isOrgChart;
+	}
+
+	get isPlain() {
+		return toBoolean(this.hideBranchColors);
+	}
+
 	get treeClass() {
-		return toBoolean(this.hideBranchColors) ? 'tree tree_plain' : 'tree';
+		const classNames = ['tree'];
+		if (this.isColumns) {
+			classNames.push('tree_columns');
+		}
+		if (this.isPlain) {
+			classNames.push('tree_plain');
+		}
+		return classNames.join(' ');
+	}
+
+	get treeRole() {
+		return this.isColumns ? 'treegrid' : 'tree';
+	}
+
+	// Name column, one column per value (type first, when set), then the count.
+	get treeStyle() {
+		if (!this.isColumns) {
+			return null;
+		}
+		const valueCount = this.columnHeaders.length - 1;
+		const valueTracks = valueCount > 0 ? 'repeat(' + valueCount + ', minmax(6rem, 1fr)) ' : '';
+		return '--hierarchy-tree-columns: minmax(14rem, 2.5fr) ' + valueTracks + 'minmax(4.5rem, 0.6fr)';
+	}
+
+	get nameColumnLabel() {
+		return this._labelFieldLabel || LABELS.nameColumn;
+	}
+
+	get columnHeaders() {
+		const headers = [];
+		if (this._typeFieldLabel) {
+			headers.push({ key: 'type', label: this._typeFieldLabel, cellClass: 'tree-head__cell' });
+		}
+		this._columns.forEach((column, position) => {
+			headers.push({
+				key: 'column-' + position,
+				label: column.label,
+				cellClass: getCellClass('tree-head__cell', column)
+			});
+		});
+		headers.push({ key: 'below', label: LABELS.belowColumn, cellClass: 'tree-head__cell tree-cell_number' });
+		return headers;
+	}
+
+	get chartClass() {
+		const classNames = ['chart'];
+		if (this._isNarrow) {
+			classNames.push('chart_narrow');
+		}
+		if (this.isPlain) {
+			classNames.push('chart_plain');
+		}
+		return classNames.join(' ');
+	}
+
+	get chartRoots() {
+		return this._chartRoots;
 	}
 
 	get rows() {
@@ -291,6 +444,10 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 
 	get hasRows() {
 		return this._rows.length > 0;
+	}
+
+	get hasContent() {
+		return this.isOrgChart ? this._chartRoots.length > 0 : this.hasRows;
 	}
 
 	get isTreeEmpty() {
@@ -483,6 +640,14 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		this.zoomTo('');
 	}
 
+	onCardZoom(event) {
+		this.zoomTo(event.detail.key);
+	}
+
+	onCardNavigate(event) {
+		this.navigateToRecord(event.detail.recordId);
+	}
+
 	onTreeKeyDown(event) {
 		const rowIndex = this._rows.findIndex(row => row.key === this._activeKey);
 		if (rowIndex < 0) {
@@ -510,7 +675,7 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 				break;
 			case 'Enter':
 				// Enter on a focused link inside the row is the link's own click; only the row itself is handled here.
-				if (event.target.getAttribute('role') !== 'treeitem' || !row.hasLink) {
+				if (!event.target.classList.contains('tree-row') || !row.hasLink) {
 					return;
 				}
 				this.navigateToRecord(row.recordId);
@@ -550,6 +715,9 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		this._isTruncated = data.isTruncated === true;
 		this._objectPluralLabel = data.objectPluralLabel || LABELS.defaultPluralLabel;
 		this._loadedNodeCount = (data.nodes || []).length;
+		this._labelFieldLabel = data.labelFieldLabel || '';
+		this._typeFieldLabel = data.typeFieldLabel || '';
+		this._columns = Array.isArray(data.columns) ? data.columns : [];
 		this._sourceIndex = buildHierarchyIndex(data.nodes);
 		if (!this._isRefreshing) {
 			this._isViewReady = false;
@@ -683,6 +851,7 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		}
 		this._hiddenRowCount = hiddenRowCount;
 		this._rows = rows.map(row => this.getDecoratedRow(row));
+		this._chartRoots = this.isOrgChart ? this.getChartRoots() : [];
 		this.generateMissingUrls();
 	}
 
@@ -710,9 +879,14 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		for (let i = 1; i < row.level; i++) {
 			guides.push({ key: row.key + '-guide-' + i });
 		}
+		const isColumns = this.isColumns;
 		return {
 			...row,
 			guides,
+			role: isColumns ? 'row' : 'treeitem',
+			cellRole: isColumns ? 'gridcell' : null,
+			cells: isColumns ? this.getRowCells(row) : [],
+			badgeText: isColumns ? '' : row.typeLabel,
 			rowClass: classNames.join(' '),
 			tabIndex: isActiveRow ? '0' : '-1',
 			ariaExpanded: row.hasChildren ? String(row.isExpanded) : null,
@@ -723,11 +897,102 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 			url: this._urlMap.get(row.key) || null,
 			toggleIcon: row.isExpanded ? 'utility:chevrondown' : 'utility:chevronright',
 			toggleLabel: formatLabel(row.isExpanded ? LABELS.collapse : LABELS.expand, row.label),
-			canZoom: row.descendantCount > 0 && row.key !== this._viewRootKey,
+			canZoom: row.descendantCount > 0 && row.key !== this._viewRootKey && !this.isOnlyViewRoot(row.key),
 			zoomLabel: formatLabel(LABELS.zoomIn, row.label),
-			countText: row.descendantCount > 0 ? formatLabel(LABELS.below, row.descendantCount) : '',
+			countText: row.descendantCount > 0 && !isColumns ? formatLabel(LABELS.below, row.descendantCount) : '',
 			inactiveText: row.isActive ? '' : LABELS.inactive
 		};
+	}
+
+	// Zooming into the only record at the top would show the same view as a section, so it is not offered.
+	isOnlyViewRoot(key) {
+		const viewRootKeys = this.viewRootKeys;
+		return viewRootKeys.length === 1 && viewRootKeys[0] === key;
+	}
+
+	getRowCells(row) {
+		const cells = [];
+		if (this._typeFieldLabel) {
+			cells.push({ key: row.key + '-type', text: row.typeLabel, cellClass: 'tree-cell' });
+		}
+		this._columns.forEach((column, position) => {
+			cells.push({
+				key: row.key + '-column-' + position,
+				text: getCellText(column, row.columnValues[position]),
+				cellClass: getCellClass('tree-cell', column)
+			});
+		});
+		cells.push({
+			key: row.key + '-below',
+			text: row.descendantCount > 0 ? String(row.descendantCount) : '',
+			cellClass: 'tree-cell tree-cell_number'
+		});
+		return cells;
+	}
+
+	// Org chart
+	getChartRoots() {
+		return this._index ? getChartTree(this._index, this.viewRootKeys).map(node => this.getChartNode(node)) : [];
+	}
+
+	getChartNode(node) {
+		const entry = node.entry;
+		const count = this._countMap.get(node.key) || 0;
+		const isCurrent = Boolean(this.currentRecordKey) && node.key === this.currentRecordKey;
+		const variant = this._isNarrow ? 'compact' : CARD_VARIANTS[node.level - 1];
+		const hostClasses = ['chart-card'];
+		hostClasses.push(
+			node.branchIndex >= 0
+				? 'chart-card_branch-' + ((node.branchIndex % BRANCH_COLOR_COUNT) + 1)
+				: 'chart-card_top'
+		);
+		if (isCurrent) {
+			hostClasses.push('chart-card_current');
+		}
+		// Details are the column values, minus any that only repeat the avatar's code; a compact card keeps one.
+		const details = entry.columnValues
+			.map((value, position) => ({
+				key: node.key + '-detail-' + position,
+				text: getCellText(this._columns[position], value)
+			}))
+			.filter(detail => detail.text && detail.text !== entry.avatarText)
+			.slice(0, variant === 'compact' ? MAX_COMPACT_CARD_DETAILS : MAX_CARD_DETAILS);
+		const children = node.children.map(child => this.getChartNode(child));
+		return {
+			key: node.key,
+			recordId: entry.recordId,
+			hostClass: hostClasses.join(' '),
+			children,
+			hasChildren: children.length > 0,
+			card: {
+				key: node.key,
+				recordId: entry.recordId,
+				label: entry.label,
+				url: this._urlMap.get(node.key) || null,
+				hasLink: this.isRecordsSource,
+				avatarText: getAvatarText(entry.avatarText, entry.label),
+				subtitle: [entry.avatarText, entry.typeLabel].filter(text => text).join(SUBTITLE_SEPARATOR),
+				details,
+				countText: count > 0 ? formatLabel(LABELS.below, count) : '',
+				canZoom: count > 0 && node.key !== this._viewRootKey && !this.isOnlyViewRoot(node.key),
+				zoomLabel: formatLabel(LABELS.zoomIn, entry.label),
+				inactiveText: entry.isActive ? '' : LABELS.inactive,
+				isActive: entry.isActive,
+				isCurrent,
+				variant
+			}
+		};
+	}
+
+	getChartTargets() {
+		const targets = [];
+		const collect = nodes =>
+			nodes.forEach(node => {
+				targets.push({ key: node.key, recordId: node.recordId });
+				collect(node.children);
+			});
+		collect(this._chartRoots);
+		return targets;
 	}
 
 	// Links
@@ -739,22 +1004,23 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 		this[NavigationMixin.Navigate](this.getRecordPageReference(recordId));
 	}
 
-	// URLs are made only for rows on screen, once per record; a failed one is tried again on the next redraw.
+	// URLs are made only for rows or cards on screen, once per record; a failed one is tried again on the next redraw.
 	generateMissingUrls() {
 		if (!this.isRecordsSource) {
 			return;
 		}
-		const missingRows = this._rows.filter(
-			row => !this._urlMap.has(row.key) && !this._pendingUrlKeySet.has(row.key)
+		const targets = this.isOrgChart ? this.getChartTargets() : this._rows;
+		const missingTargets = targets.filter(
+			target => !this._urlMap.has(target.key) && !this._pendingUrlKeySet.has(target.key)
 		);
-		if (missingRows.length === 0) {
+		if (missingTargets.length === 0) {
 			return;
 		}
-		missingRows.forEach(row => this._pendingUrlKeySet.add(row.key));
-		const requests = missingRows.map(row =>
-			this[NavigationMixin.GenerateUrl](this.getRecordPageReference(row.recordId))
-				.then(url => ({ key: row.key, url }))
-				.catch(() => ({ key: row.key, url: null }))
+		missingTargets.forEach(target => this._pendingUrlKeySet.add(target.key));
+		const requests = missingTargets.map(target =>
+			this[NavigationMixin.GenerateUrl](this.getRecordPageReference(target.recordId))
+				.then(url => ({ key: target.key, url }))
+				.catch(() => ({ key: target.key, url: null }))
 		);
 		Promise.all(requests).then(results => {
 			results.forEach(result => {
@@ -769,6 +1035,9 @@ export default class HierarchyTree extends NavigationMixin(LightningElement) {
 				}
 				return { ...row, url: this._urlMap.get(row.key) };
 			});
+			if (this.isOrgChart) {
+				this._chartRoots = this.getChartRoots();
+			}
 		});
 	}
 }

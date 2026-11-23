@@ -9,7 +9,7 @@
 			onclick={onRefreshClick}
 			data-id="refresh"
 		></lightning-button-icon>
-		<div class="tree-body">
+		<div class="tree-body" lwc:ref="body">
 			<template lwc:if={isLoading}>
 				<div class="tree-loading" data-id="loading">
 					<lightning-spinner alternative-text={labels.loading} size="small"></lightning-spinner>
@@ -27,43 +27,45 @@
 				</div>
 			</template>
 			<template lwc:else>
-				<div class="tree-toolbar">
-					<template lwc:if={showSearch}>
-						<lightning-input
-							class="tree-toolbar__search"
-							type="search"
-							label={labels.search}
-							variant="label-hidden"
-							placeholder={searchPlaceholder}
-							value={searchTerm}
-							onchange={onSearchChange}
-							data-id="search"
-						></lightning-input>
-					</template>
-					<div class="tree-toolbar__actions">
-						<lightning-button
-							label={labels.expandAll}
-							disabled={isTreeEmpty}
-							onclick={onExpandAllClick}
-							data-id="expand-all"
-						></lightning-button>
-						<lightning-button
-							label={labels.collapseAll}
-							disabled={isTreeEmpty}
-							onclick={onCollapseAllClick}
-							data-id="collapse-all"
-						></lightning-button>
-						<lightning-button-icon
-							icon-name="utility:zoomin"
-							variant="border-filled"
-							alternative-text={toolbarZoomLabel}
-							title={toolbarZoomLabel}
-							disabled={isToolbarZoomDisabled}
-							onclick={onToolbarZoomClick}
-							data-id="toolbar-zoom"
-						></lightning-button-icon>
+				<template lwc:if={showToolbar}>
+					<div class="tree-toolbar">
+						<template lwc:if={showSearch}>
+							<lightning-input
+								class="tree-toolbar__search"
+								type="search"
+								label={labels.search}
+								variant="label-hidden"
+								placeholder={searchPlaceholder}
+								value={searchTerm}
+								onchange={onSearchChange}
+								data-id="search"
+							></lightning-input>
+						</template>
+						<div class="tree-toolbar__actions">
+							<lightning-button
+								label={labels.expandAll}
+								disabled={isTreeEmpty}
+								onclick={onExpandAllClick}
+								data-id="expand-all"
+							></lightning-button>
+							<lightning-button
+								label={labels.collapseAll}
+								disabled={isTreeEmpty}
+								onclick={onCollapseAllClick}
+								data-id="collapse-all"
+							></lightning-button>
+							<lightning-button-icon
+								icon-name="utility:zoomin"
+								variant="border-filled"
+								alternative-text={toolbarZoomLabel}
+								title={toolbarZoomLabel}
+								disabled={isToolbarZoomDisabled}
+								onclick={onToolbarZoomClick}
+								data-id="toolbar-zoom"
+							></lightning-button-icon>
+						</div>
 					</div>
-				</div>
+				</template>
 
 				<template lwc:if={isZoomed}>
 					<nav class="tree-breadcrumb" aria-label={labels.breadcrumb} data-id="breadcrumb">
@@ -112,96 +114,177 @@
 					<p class="tree-notice tree-notice_warning" data-id="truncated">{truncatedText}</p>
 				</template>
 
-				<template lwc:if={hasRows}>
-					<ul class={treeClass} role="tree" aria-label={treeLabel} onkeydown={onTreeKeyDown} data-id="tree">
-						<template for:each={rows} for:item="row">
-							<li
-								key={row.key}
-								class={row.rowClass}
-								role="treeitem"
-								data-key={row.key}
-								tabindex={row.tabIndex}
-								aria-level={row.level}
-								aria-setsize={row.setSize}
-								aria-posinset={row.posInSet}
-								aria-expanded={row.ariaExpanded}
-								aria-current={row.ariaCurrent}
-								aria-labelledby={row.nameId}
-								aria-describedby={row.detailId}
-								onclick={onRowClick}
-							>
-								<template for:each={row.guides} for:item="guide">
-									<span key={guide.key} class="tree-row__guide"></span>
+				<template lwc:if={hasContent}>
+					<template lwc:if={isOrgChart}>
+						<div class={chartClass} data-id="chart">
+							<ul class="chart-level chart-level_top" aria-label={treeLabel}>
+								<template for:each={chartRoots} for:item="root">
+									<li key={root.key} class="chart-node">
+										<c-hierarchy-tree-card
+											class={root.hostClass}
+											card={root.card}
+											data-key={root.key}
+											onzoom={onCardZoom}
+											onnavigate={onCardNavigate}
+										></c-hierarchy-tree-card>
+										<template lwc:if={root.hasChildren}>
+											<ul class="chart-level chart-level_children">
+												<template for:each={root.children} for:item="child">
+													<li key={child.key} class="chart-node">
+														<c-hierarchy-tree-card
+															class={child.hostClass}
+															card={child.card}
+															data-key={child.key}
+															onzoom={onCardZoom}
+															onnavigate={onCardNavigate}
+														></c-hierarchy-tree-card>
+														<template lwc:if={child.hasChildren}>
+															<ul class="chart-level chart-level_stack">
+																<template
+																	for:each={child.children}
+																	for:item="grandchild"
+																>
+																	<li key={grandchild.key} class="chart-node">
+																		<c-hierarchy-tree-card
+																			class={grandchild.hostClass}
+																			card={grandchild.card}
+																			data-key={grandchild.key}
+																			onzoom={onCardZoom}
+																			onnavigate={onCardNavigate}
+																		></c-hierarchy-tree-card>
+																	</li>
+																</template>
+															</ul>
+														</template>
+													</li>
+												</template>
+											</ul>
+										</template>
+									</li>
 								</template>
-								<span class="tree-row__toggle">
-									<template lwc:if={row.hasChildren}>
-										<button
-											type="button"
-											class="tree-icon-button"
-											tabindex="-1"
-											title={row.toggleLabel}
-											aria-label={row.toggleLabel}
-											data-key={row.key}
-											data-id="toggle"
-											onclick={onToggleClick}
+							</ul>
+						</div>
+					</template>
+					<template lwc:else>
+						<ul
+							class={treeClass}
+							role={treeRole}
+							aria-label={treeLabel}
+							style={treeStyle}
+							onkeydown={onTreeKeyDown}
+							data-id="tree"
+						>
+							<template lwc:if={isColumns}>
+								<li class="tree-head" role="row" data-id="column-head">
+									<span class="tree-head__cell" role="columnheader">{nameColumnLabel}</span>
+									<template for:each={columnHeaders} for:item="header">
+										<span key={header.key} class={header.cellClass} role="columnheader"
+											>{header.label}</span
 										>
-											<lightning-icon
-												icon-name={row.toggleIcon}
-												size="xx-small"
-												alternative-text={row.toggleLabel}
-											></lightning-icon>
-										</button>
 									</template>
-								</span>
-								<span class="tree-row__main">
-									<span class="tree-row__name" id={row.nameId}>
-										<template lwc:if={row.hasLink}>
-											<a
-												href={row.url}
+								</li>
+							</template>
+							<template for:each={rows} for:item="row">
+								<li
+									key={row.key}
+									class={row.rowClass}
+									role={row.role}
+									data-key={row.key}
+									tabindex={row.tabIndex}
+									aria-level={row.level}
+									aria-setsize={row.setSize}
+									aria-posinset={row.posInSet}
+									aria-expanded={row.ariaExpanded}
+									aria-current={row.ariaCurrent}
+									aria-labelledby={row.nameId}
+									aria-describedby={row.detailId}
+									onclick={onRowClick}
+								>
+									<span class="tree-row__cell" role={row.cellRole}>
+										<template for:each={row.guides} for:item="guide">
+											<span key={guide.key} class="tree-row__guide"></span>
+										</template>
+										<span class="tree-row__toggle">
+											<template lwc:if={row.hasChildren}>
+												<button
+													type="button"
+													class="tree-icon-button"
+													tabindex="-1"
+													title={row.toggleLabel}
+													aria-label={row.toggleLabel}
+													data-key={row.key}
+													data-id="toggle"
+													onclick={onToggleClick}
+												>
+													<lightning-icon
+														icon-name={row.toggleIcon}
+														size="xx-small"
+														alternative-text={row.toggleLabel}
+													></lightning-icon>
+												</button>
+											</template>
+										</span>
+										<span class="tree-row__main">
+											<span class="tree-row__name" id={row.nameId}>
+												<template lwc:if={row.hasLink}>
+													<a
+														href={row.url}
+														tabindex="-1"
+														data-key={row.key}
+														data-id="name-link"
+														onclick={onNameClick}
+														>{row.label}</a
+													>
+												</template>
+												<template lwc:else>{row.label}</template>
+											</span>
+											<span class="tree-row__details" id={row.detailId}>
+												<template lwc:if={row.badgeText}>
+													<span class="tree-badge" data-id="type-badge">{row.badgeText}</span>
+												</template>
+												<template lwc:if={row.countText}>
+													<span class="tree-row__count" data-id="count">{row.countText}</span>
+												</template>
+												<template lwc:if={row.inactiveText}>
+													<span class="tree-row__inactive">{row.inactiveText}</span>
+												</template>
+											</span>
+										</span>
+										<template lwc:if={row.canZoom}>
+											<button
+												type="button"
+												class="tree-icon-button tree-row__zoom"
 												tabindex="-1"
+												title={row.zoomLabel}
+												aria-label={row.zoomLabel}
 												data-key={row.key}
-												data-id="name-link"
-												onclick={onNameClick}
-												>{row.label}</a
+												data-id="zoom"
+												onclick={onZoomClick}
 											>
-										</template>
-										<template lwc:else>{row.label}</template>
-									</span>
-									<span class="tree-row__details" id={row.detailId}>
-										<template lwc:if={row.typeLabel}>
-											<span class="tree-badge" data-id="type-badge">{row.typeLabel}</span>
-										</template>
-										<template lwc:if={row.countText}>
-											<span class="tree-row__count" data-id="count">{row.countText}</span>
-										</template>
-										<template lwc:if={row.inactiveText}>
-											<span class="tree-row__inactive">{row.inactiveText}</span>
+												<lightning-icon
+													icon-name="utility:zoomin"
+													size="xx-small"
+													alternative-text={row.zoomLabel}
+												></lightning-icon>
+											</button>
 										</template>
 									</span>
-								</span>
-								<template lwc:if={row.canZoom}>
-									<button
-										type="button"
-										class="tree-icon-button tree-row__zoom"
-										tabindex="-1"
-										title={row.zoomLabel}
-										aria-label={row.zoomLabel}
-										data-key={row.key}
-										data-id="zoom"
-										onclick={onZoomClick}
-									>
-										<lightning-icon
-											icon-name="utility:zoomin"
-											size="xx-small"
-											alternative-text={row.zoomLabel}
-										></lightning-icon>
-									</button>
-								</template>
-							</li>
+									<template for:each={row.cells} for:item="cell">
+										<span
+											key={cell.key}
+											class={cell.cellClass}
+											role="gridcell"
+											title={cell.text}
+											data-id="cell"
+											>{cell.text}</span
+										>
+									</template>
+								</li>
+							</template>
+						</ul>
+						<template lwc:if={hiddenRowsText}>
+							<p class="tree-notice" data-id="hidden-rows">{hiddenRowsText}</p>
 						</template>
-					</ul>
-					<template lwc:if={hiddenRowsText}>
-						<p class="tree-notice" data-id="hidden-rows">{hiddenRowsText}</p>
 					</template>
 				</template>
 				<template lwc:else>

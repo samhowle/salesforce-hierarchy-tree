@@ -160,14 +160,14 @@
 	margin-top: 0.375rem;
 }
 
-/* Branch colors: six that tell apart for most color vision, none of them the error red. Each can be set from
-   outside with --hierarchy-tree-branch-color-1 to -6. */
+/* Branch colors: six that tell apart for most color vision, none of them the error red, each dark enough for white
+   avatar text. Each can be set from outside with --hierarchy-tree-branch-color-1 to -6. */
 .tree-row_branch-1 {
 	border-left-color: var(--hierarchy-tree-branch-color-1, #0176d3);
 }
 
 .tree-row_branch-2 {
-	border-left-color: var(--hierarchy-tree-branch-color-2, #dd7a01);
+	border-left-color: var(--hierarchy-tree-branch-color-2, #b85400);
 }
 
 .tree-row_branch-3 {
@@ -253,9 +253,19 @@
 	background: var(--slds-g-color-surface-container-3, #e5e5e5);
 }
 
-.tree-row__main {
+/* The cell holds guides, chevron, name and zoom; it is the whole row in the tree and the first column in Columns. */
+.tree-row__cell {
 	display: flex;
 	flex: 1 1 auto;
+	align-items: center;
+	align-self: stretch;
+	min-width: 0;
+}
+
+/* The text keeps its own width, so the zoom button sits right after it however wide the component is. */
+.tree-row__main {
+	display: flex;
+	flex: 0 1 auto;
 	flex-wrap: wrap;
 	align-items: baseline;
 	min-width: 0;
@@ -297,4 +307,267 @@
 .tree-row__zoom {
 	flex: 0 0 auto;
 	margin-left: 0.25rem;
+}
+
+/* Columns: one grid shared by the header and every row, laid out from --hierarchy-tree-columns. */
+.tree_columns .tree-row,
+.tree-head {
+	display: grid;
+	grid-template-columns: var(--hierarchy-tree-columns);
+	column-gap: 0.75rem;
+	align-items: center;
+}
+
+.tree_columns .tree-row {
+	border-bottom: 1px solid var(--slds-g-color-border-2, #ececec);
+	border-radius: 0;
+}
+
+.tree_columns .tree-row_level-3 + .tree-row_level-2,
+.tree_columns .tree-row:not(.tree-row_level-1) + .tree-row_level-1 {
+	margin-top: 0;
+}
+
+.tree-head {
+	padding: 0.375rem 0.25rem;
+	border-top: 1px solid var(--slds-g-color-border-2, #e5e5e5);
+	border-bottom: 1px solid var(--slds-g-color-border-2, #e5e5e5);
+	border-left: 3px solid transparent;
+	background: var(--slds-g-color-surface-container-2, #f3f3f3);
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--slds-g-color-on-surface-2, #444444);
+}
+
+.tree-head__cell,
+.tree-cell {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tree-cell {
+	color: var(--slds-g-color-on-surface-2, #444444);
+}
+
+.tree-cell_number {
+	padding-right: 0.5rem;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Org chart: the top card, its children in a row below it, and their children stacked under each one. */
+.chart {
+	padding: 0.25rem 0 0.5rem;
+	overflow-x: auto;
+}
+
+.chart-level {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.chart-level_top {
+	display: flex;
+	justify-content: center;
+	gap: 1.5rem;
+}
+
+.chart-node {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.chart-card {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-top-color, #032d60);
+}
+
+.chart-card_branch-1 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-1, #0176d3);
+}
+
+.chart-card_branch-2 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-2, #b85400);
+}
+
+.chart-card_branch-3 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-3, #0b827c);
+}
+
+.chart-card_branch-4 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-4, #9050e9);
+}
+
+.chart-card_branch-5 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-5, #2e844a);
+}
+
+.chart-card_branch-6 {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-branch-color-6, #c23a8f);
+}
+
+.chart_plain .chart-card {
+	--hierarchy-tree-card-color: var(--hierarchy-tree-top-color, #032d60);
+}
+
+/* Connectors: a line down from the parent, a bar across the children, and a line down into each child. */
+.chart-level_children {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	padding-top: 1rem;
+}
+
+.chart-level_children::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 50%;
+	height: 1rem;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+}
+
+.chart-level_children > .chart-node {
+	padding: 1rem 0.5rem 0;
+}
+
+.chart-level_children > .chart-node::before,
+.chart-level_children > .chart-node::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 50%;
+	width: 50%;
+	height: 1rem;
+	border-top: 1px solid var(--slds-g-color-border-1, #b0adab);
+}
+
+.chart-level_children > .chart-node::after {
+	right: auto;
+	left: 50%;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+}
+
+.chart-level_children > .chart-node:first-child::before,
+.chart-level_children > .chart-node:last-child::after {
+	border: 0;
+}
+
+.chart-level_children > .chart-node:last-child::before {
+	border-right: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-radius: 0 0.375rem 0 0;
+}
+
+.chart-level_children > .chart-node:first-child::after {
+	border-radius: 0.375rem 0 0 0;
+}
+
+.chart-level_children > .chart-node:only-child::before {
+	border-right: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-top: 0;
+	border-radius: 0;
+}
+
+/* The stacked third level hangs from the left edge of its parent card, one elbow per card. */
+.chart-level_stack {
+	position: relative;
+	box-sizing: border-box;
+	width: 12rem;
+	padding: 0.375rem 0 0 1.125rem;
+}
+
+.chart-level_stack::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0.5rem;
+	height: 0.375rem;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+}
+
+.chart-level_stack > .chart-node {
+	align-items: stretch;
+	padding-top: 0.5rem;
+}
+
+.chart-level_stack > .chart-node::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -0.625rem;
+	width: 0.625rem;
+	height: calc(50% + 0.25rem);
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-bottom: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-radius: 0 0 0 0.375rem;
+}
+
+.chart-level_stack > .chart-node:not(:last-child)::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -0.625rem;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+}
+
+/* Narrow: every level stacks, with the same elbows, and every card is compact. */
+.chart_narrow .chart-level_top {
+	display: block;
+}
+
+.chart_narrow .chart-node {
+	align-items: stretch;
+}
+
+.chart_narrow .chart-level_children,
+.chart_narrow .chart-level_stack {
+	display: block;
+	width: auto;
+	padding: 0.375rem 0 0 1.125rem;
+}
+
+.chart_narrow .chart-level_children::before {
+	left: 0.5rem;
+	height: 0.375rem;
+}
+
+.chart_narrow .chart-level_children > .chart-node {
+	padding: 0.5rem 0 0;
+}
+
+.chart_narrow .chart-level_children > .chart-node::before,
+.chart_narrow .chart-level_children > .chart-node:last-child::before,
+.chart_narrow .chart-level_children > .chart-node:only-child::before {
+	right: auto;
+	left: -0.625rem;
+	width: 0.625rem;
+	height: 2rem;
+	border: 0;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-bottom: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-radius: 0 0 0 0.375rem;
+}
+
+.chart_narrow .chart-level_children > .chart-node::after {
+	top: 0;
+	bottom: 0;
+	left: -0.625rem;
+	width: 0;
+	height: auto;
+	border: 0;
+	border-left: 1px solid var(--slds-g-color-border-1, #b0adab);
+	border-radius: 0;
+}
+
+.chart_narrow .chart-level_children > .chart-node:last-child::after {
+	border: 0;
+}
+
+.chart_narrow .chart-level_stack > .chart-node::before {
+	height: 2rem;
 }

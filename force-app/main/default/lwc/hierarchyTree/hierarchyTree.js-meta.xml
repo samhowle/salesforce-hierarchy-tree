@@ -15,12 +15,15 @@
 		<targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
 			<property name="cardTitle" type="String" label="Card title" default="Hierarchy" />
 			<property name="iconName" type="String" label="Icon" default="standard:hierarchy" description="An SLDS icon name, for example standard:hierarchy." />
+			<property name="layout" type="String" label="Layout" datasource="Tree,Columns,Org chart" default="Tree" description="Tree: names only. Columns: the column fields line up beside each name, like a related list. Org chart: cards for a small hierarchy, three levels at a time. Columns and Org chart fall back to narrow forms in a narrow space." />
 			<property name="hierarchySource" type="String" label="Data source" datasource="Sample,Records" default="Sample" description="Sample shows a built-in tree with no setup. Records reads the object named below." />
 			<property name="hierarchyObjectApiName" type="String" label="Object API name" default="Account" description="The object to draw. It needs a lookup to itself." />
 			<property name="parentFieldApiName" type="String" label="Parent field API name" default="ParentId" description="The object's lookup to itself." />
 			<property name="labelFieldApiName" type="String" label="Name field API name" default="Name" />
 			<property name="typeFieldApiName" type="String" label="Type field API name" default="Type" description="Optional. Shown as a badge on each row; a picklist shows its label." />
 			<property name="activeFieldApiName" type="String" label="Active field API name" description="Optional. A checkbox; rows where it is false are muted." />
+			<property name="columnFieldApiNames" type="String" label="Column fields" description="Optional. Up to five comma-separated field API names for the Columns layout and the org-chart cards. A lookup shows the related name; Relationship.Field reads one field through one lookup, for example Owner.Alias." />
+			<property name="avatarFieldApiName" type="String" label="Avatar field API name" description="Optional. A short text field, such as a code, for the org-chart avatars. A code like REG-EUR shows EUR; blank shows initials." />
 			<property name="hideInactive" type="Boolean" label="Hide inactive records" default="false" description="Hides inactive records and everything below them." />
 			<property name="rootRecordId" type="String" label="Top record Id" description="Optional. The view starts zoomed in on this record." />
 			<property name="isRootLocked" type="Boolean" label="Lock to the top record" default="false" description="Viewers cannot go above the top record. A view setting, not security: sharing decides what users can see." />
@@ -32,12 +35,15 @@
 		<targetConfig targets="lightningCommunity__Default">
 			<property name="cardTitle" type="String" label="Card title" default="Hierarchy" />
 			<property name="iconName" type="String" label="Icon" default="standard:hierarchy" description="An SLDS icon name, for example standard:hierarchy." />
+			<property name="layout" type="String" label="Layout" datasource="Tree,Columns,Org chart" default="Tree" description="Tree: names only. Columns: the column fields line up beside each name, like a related list. Org chart: cards for a small hierarchy, three levels at a time. Columns and Org chart fall back to narrow forms in a narrow space." />
 			<property name="hierarchySource" type="String" label="Data source" datasource="Sample,Records" default="Sample" description="Sample shows a built-in tree with no setup. Records reads the object named below." />
 			<property name="hierarchyObjectApiName" type="String" label="Object API name" default="Account" description="The object to draw. It needs a lookup to itself." />
 			<property name="parentFieldApiName" type="String" label="Parent field API name" default="ParentId" description="The object's lookup to itself." />
 			<property name="labelFieldApiName" type="String" label="Name field API name" default="Name" />
 			<property name="typeFieldApiName" type="String" label="Type field API name" default="Type" description="Optional. Shown as a badge on each row; a picklist shows its label." />
 			<property name="activeFieldApiName" type="String" label="Active field API name" description="Optional. A checkbox; rows where it is false are muted." />
+			<property name="columnFieldApiNames" type="String" label="Column fields" description="Optional. Up to five comma-separated field API names for the Columns layout and the org-chart cards. A lookup shows the related name; Relationship.Field reads one field through one lookup, for example Owner.Alias." />
+			<property name="avatarFieldApiName" type="String" label="Avatar field API name" description="Optional. A short text field, such as a code, for the org-chart avatars. A code like REG-EUR shows EUR; blank shows initials." />
 			<property name="hideInactive" type="Boolean" label="Hide inactive records" default="false" description="Hides inactive records and everything below them." />
 			<property name="rootRecordId" type="String" label="Top record Id" description="Optional. The view starts zoomed in on this record." />
 			<property name="isRootLocked" type="Boolean" label="Lock to the top record" default="false" description="Viewers cannot go above the top record. A view setting, not security: sharing decides what users can see." />

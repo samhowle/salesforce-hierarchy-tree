@@ -1,6 +1,9 @@
 import {
 	BLANK_LABEL,
 	buildHierarchyIndex,
+	CHART_DEPTH,
+	getAvatarText,
+	getChartTree,
 	getAncestorKeys,
 	getBranchIndexMap,
 	getBranchKeys,
@@ -44,6 +47,17 @@ describe('hierarchyTreeModel', () => {
 	});
 
 	describe('buildHierarchyIndex', () => {
+		it('keeps the avatar text and column values of each node as text', () => {
+			const index = buildHierarchyIndex([
+				node('a', null, 'Alpha', { avatarText: ' REG-EUR ', columnValues: ['x', null, 3] }),
+				node('b', 'a', 'Beta')
+			]);
+			expect(index.nodeMap.get('a')).toMatchObject({ avatarText: 'REG-EUR', columnValues: ['x', '', '3'] });
+			expect(index.nodeMap.get('b')).toMatchObject({ avatarText: '', columnValues: [] });
+			const pruned = pruneInactiveBranches(index);
+			expect(pruned.nodeMap.get('a')).toMatchObject({ avatarText: 'REG-EUR', columnValues: ['x', '', '3'] });
+		});
+
 		it('builds an empty index from no nodes', () => {
 			const index = buildHierarchyIndex(null);
 			expect(index.rootKeys).toEqual([]);
@@ -292,6 +306,40 @@ describe('hierarchyTreeModel', () => {
 			});
 			expect(rows).toHaveLength(4);
 			expect(hiddenRowCount).toBe(6);
+		});
+	});
+
+	describe('org chart', () => {
+		const index = buildHierarchyIndex(HIERARCHY_NODES);
+
+		it('nests the view three levels deep and colors each branch from the view', () => {
+			const [globalNode] = getChartTree(index, ['n01']);
+			expect(CHART_DEPTH).toBe(3);
+			expect(globalNode).toMatchObject({ key: 'n01', level: 1, branchIndex: -1, childCount: 3 });
+			expect(globalNode.children.map(child => [child.entry.label, child.branchIndex])).toEqual([
+				['Americas', 0],
+				['APAC', 1],
+				['EMEA', 2]
+			]);
+			const unitedStates = globalNode.children[0].children[1];
+			expect(unitedStates).toMatchObject({ level: 3, branchIndex: 0, childCount: 2 });
+			expect(unitedStates.children).toEqual([]);
+		});
+
+		it('starts from the zoomed record and skips an unknown root', () => {
+			const roots = getChartTree(index, ['n02', 'unknown']);
+			expect(roots).toHaveLength(1);
+			expect(roots[0].children.map(child => child.branchIndex)).toEqual([0, 1]);
+		});
+
+		it('shows the last part of a code, or initials without one', () => {
+			expect(getAvatarText('REG-EUR', 'Europe')).toBe('EUR');
+			expect(getAvatarText(' ctr-es ', 'Spain')).toBe('ES');
+			expect(getAvatarText('DST-NORTHEAST', 'North East')).toBe('NORTH');
+			expect(getAvatarText('HQ', 'Head Office')).toBe('HQ');
+			expect(getAvatarText('', 'United States of America')).toBe('US');
+			expect(getAvatarText(null, 'Global')).toBe('GL');
+			expect(getAvatarText('', '  ')).toBe('');
 		});
 	});
 });

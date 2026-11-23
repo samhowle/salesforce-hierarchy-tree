@@ -1,0 +1,45 @@
+<template>
+	<div class={cardClass} tabindex="-1" aria-current={ariaCurrent} lwc:ref="card" data-id="card">
+		<span class={avatarClass} aria-hidden="true" data-id="avatar">{card.avatarText}</span>
+		<span class="card__text">
+			<span class="card__name">
+				<template lwc:if={card.hasLink}>
+					<a href={card.url} lwc:ref="link" onclick={onNameClick} data-id="card-link">{card.label}</a>
+				</template>
+				<template lwc:else>{card.label}</template>
+			</span>
+			<template lwc:if={card.subtitle}>
+				<span class="card__subtitle" data-id="subtitle">{card.subtitle}</span>
+			</template>
+			<template for:each={card.details} for:item="detail">
+				<span key={detail.key} class="card__detail" data-id="detail">{detail.text}</span>
+			</template>
+			<template lwc:if={card.inactiveText}>
+				<span class="card__inactive">{card.inactiveText}</span>
+			</template>
+		</span>
+		<template lwc:if={hasFoot}>
+			<span class="card__foot">
+				<template lwc:if={card.countText}>
+					<span data-id="count">{card.countText}</span>
+				</template>
+				<template lwc:if={card.canZoom}>
+					<button
+						type="button"
+						class="card__zoom"
+						title={card.zoomLabel}
+						aria-label={card.zoomLabel}
+						onclick={onZoomClick}
+						data-id="card-zoom"
+					>
+						<lightning-icon
+							icon-name="utility:zoomin"
+							size="xx-small"
+							alternative-text={card.zoomLabel}
+						></lightning-icon>
+					</button>
+				</template>
+			</span>
+		</template>
+	</div>
+</template>

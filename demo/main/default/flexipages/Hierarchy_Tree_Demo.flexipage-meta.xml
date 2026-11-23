@@ -1,26 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
-	<description>Two Hierarchy Tree instances for checking the component in an org: sample data, and Accounts by ParentId.</description>
+	<description>Hierarchy Tree in each layout for checking it in an org: Accounts by ParentId with columns and as an org chart, and the built-in sample as an org chart and a tree.</description>
 	<flexiPageRegions>
 		<itemInstances>
 			<componentInstance>
 				<componentInstanceProperties>
 					<name>cardTitle</name>
-					<value>Sample hierarchy</value>
+					<value>Account hierarchy: columns</value>
 				</componentInstanceProperties>
 				<componentInstanceProperties>
-					<name>hierarchySource</name>
-					<value>Sample</value>
-				</componentInstanceProperties>
-				<componentName>hierarchyTree</componentName>
-				<identifier>hierarchyTreeSample</identifier>
-			</componentInstance>
-		</itemInstances>
-		<itemInstances>
-			<componentInstance>
-				<componentInstanceProperties>
-					<name>cardTitle</name>
-					<value>Account hierarchy</value>
+					<name>layout</name>
+					<value>Columns</value>
 				</componentInstanceProperties>
 				<componentInstanceProperties>
 					<name>hierarchySource</name>
@@ -43,11 +33,93 @@
 					<value>Type</value>
 				</componentInstanceProperties>
 				<componentInstanceProperties>
+					<name>columnFieldApiNames</name>
+					<value>AccountNumber, Industry, BillingCity, OwnerId, AnnualRevenue</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
 					<name>expandDepth</name>
 					<value>2</value>
 				</componentInstanceProperties>
 				<componentName>hierarchyTree</componentName>
-				<identifier>hierarchyTreeAccounts</identifier>
+				<identifier>hierarchyTreeAccountColumns</identifier>
+			</componentInstance>
+		</itemInstances>
+		<itemInstances>
+			<componentInstance>
+				<componentInstanceProperties>
+					<name>cardTitle</name>
+					<value>Sample org chart</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>layout</name>
+					<value>Org chart</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchySource</name>
+					<value>Sample</value>
+				</componentInstanceProperties>
+				<componentName>hierarchyTree</componentName>
+				<identifier>hierarchyTreeSampleChart</identifier>
+			</componentInstance>
+		</itemInstances>
+		<itemInstances>
+			<componentInstance>
+				<componentInstanceProperties>
+					<name>cardTitle</name>
+					<value>Account org chart</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>layout</name>
+					<value>Org chart</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchySource</name>
+					<value>Records</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchyObjectApiName</name>
+					<value>Account</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>parentFieldApiName</name>
+					<value>ParentId</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>labelFieldApiName</name>
+					<value>Name</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>typeFieldApiName</name>
+					<value>Type</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>columnFieldApiNames</name>
+					<value>OwnerId, BillingCity</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>avatarFieldApiName</name>
+					<value>AccountNumber</value>
+				</componentInstanceProperties>
+				<componentName>hierarchyTree</componentName>
+				<identifier>hierarchyTreeAccountChart</identifier>
+			</componentInstance>
+		</itemInstances>
+		<itemInstances>
+			<componentInstance>
+				<componentInstanceProperties>
+					<name>cardTitle</name>
+					<value>Sample tree</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>layout</name>
+					<value>Tree</value>
+				</componentInstanceProperties>
+				<componentInstanceProperties>
+					<name>hierarchySource</name>
+					<value>Sample</value>
+				</componentInstanceProperties>
+				<componentName>hierarchyTree</componentName>
+				<identifier>hierarchyTreeSampleTree</identifier>
 			</componentInstance>
 		</itemInstances>
 		<name>main</name>

@@ -17,6 +17,22 @@ jest.mock('@salesforce/apex', () => ({ refreshApex: jest.fn(() => Promise.resolv
 
 const HIERARCHY_NODES = require('./data/hierarchyNodes.json');
 const PLURAL_LABEL = 'Locations';
+// The same tree with codes and three columns, for the Columns and Org chart layouts.
+const COLUMNS = [
+	{ label: 'Code', dataType: 'string' },
+	{ label: 'Revenue', dataType: 'currency' },
+	{ label: 'Key account', dataType: 'boolean' }
+];
+const CODED_NODES = HIERARCHY_NODES.map((node, position) => ({
+	...node,
+	avatarText: 'CODE-' + node.label.substring(0, 3).toUpperCase(),
+	columnValues: [
+		'CODE-' + node.label.substring(0, 3).toUpperCase(),
+		position === 0 ? '$1,000' : null,
+		String(position === 1)
+	]
+}));
+const CODED_DATA = { nodes: CODED_NODES, columns: COLUMNS, labelFieldLabel: 'AOR Name', typeFieldLabel: 'AOR Type' };
 
 function mount(props = {}) {
 	const element = createElement('c-hierarchy-tree', { is: HierarchyTree });
@@ -86,7 +102,9 @@ describe('c-hierarchy-tree', () => {
 				parentFieldApiName: 'ParentAOR__c',
 				labelFieldApiName: 'Name',
 				typeFieldApiName: 'Type__c',
-				activeFieldApiName: 'IsActive__c'
+				activeFieldApiName: 'IsActive__c',
+				columnFieldApiNames: 'AOR_Code__c, OwnerId',
+				avatarFieldApiName: 'AOR_Code__c'
 			});
 			await flush();
 			expect(getHierarchy.getLastConfig()).toEqual({
@@ -95,7 +113,9 @@ describe('c-hierarchy-tree', () => {
 				parentFieldApiName: 'ParentAOR__c',
 				labelFieldApiName: 'Name',
 				typeFieldApiName: 'Type__c',
-				activeFieldApiName: 'IsActive__c'
+				activeFieldApiName: 'IsActive__c',
+				columnFieldApiNames: 'AOR_Code__c, OwnerId',
+				avatarFieldApiName: 'AOR_Code__c'
 			});
 		});
 
@@ -506,6 +526,162 @@ describe('c-hierarchy-tree', () => {
 			const element = await mountWithData({ recordId: 'n09', rootRecordId: 'n02', isRootLocked: true });
 			expect(rowLabels(element)).not.toContain('Berlin Office');
 			expect(element.shadowRoot.querySelector('[aria-current="page"]')).toBeNull();
+		});
+	});
+
+	describe('layouts', () => {
+		let resizeCallback;
+		const cardsOf = element => Array.from(element.shadowRoot.querySelectorAll('c-hierarchy-tree-card'));
+		const cardFor = (element, label) => cardsOf(element).find(card => card.card.label === label);
+		const cellTexts = item => Array.from(item.querySelectorAll('[data-id="cell"]')).map(cell => cell.textContent);
+
+		async function resizeTo(width) {
+			resizeCallback([{ contentRect: { width } }]);
+			await flush();
+		}
+
+		beforeEach(() => {
+			resizeCallback = null;
+			global.ResizeObserver = class {
+				constructor(callback) {
+					resizeCallback = callback;
+				}
+				observe() {}
+				disconnect() {}
+			};
+		});
+
+		afterEach(() => {
+			delete global.ResizeObserver;
+		});
+
+		it('falls back to Tree for an unknown layout', () => {
+			const element = mount({ layout: 'Spiral' });
+			expect(element.layout).toBe('Tree');
+		});
+
+		it('keeps the tree layout as a tree with badges and counts', async () => {
+			const element = await mountWithData({}, CODED_DATA);
+			expect(byDataId(element, 'tree').getAttribute('role')).toBe('tree');
+			expect(byDataId(element, 'column-head')).toBeNull();
+			expect(allByDataId(element, 'cell')).toHaveLength(0);
+		});
+
+		it('lines the column values up beside each name in a tree grid', async () => {
+			const element = await mountWithData({ layout: 'Columns' }, CODED_DATA);
+			const tree = byDataId(element, 'tree');
+			expect(tree.getAttribute('role')).toBe('treegrid');
+			expect(tree.getAttribute('style')).toContain('repeat(4,');
+			const headers = Array.from(byDataId(element, 'column-head').querySelectorAll('[role="columnheader"]'));
+			expect(headers.map(header => header.textContent)).toEqual([
+				'AOR Name',
+				'AOR Type',
+				'Code',
+				'Revenue',
+				'Key account',
+				'Below'
+			]);
+			const globalRow = element.shadowRoot.querySelector('[role="row"][data-key="n01"]');
+			expect(globalRow.getAttribute('aria-level')).toBe('1');
+			expect(cellTexts(globalRow)).toEqual(['Global', 'CODE-GLO', '$1,000', 'No', '9']);
+			expect(cellTexts(element.shadowRoot.querySelector('[data-key="n02"]'))).toEqual([
+				'Region',
+				'CODE-AME',
+				'',
+				'Yes',
+				'4'
+			]);
+			expect(globalRow.querySelectorAll('[data-id="cell"]')[2].classList.contains('tree-cell_number')).toBe(true);
+			expect(globalRow.querySelector('[data-id="type-badge"]')).toBeNull();
+			expect(globalRow.querySelector('[data-id="count"]')).toBeNull();
+		});
+
+		it('turns columns back into the tree when the component is narrow', async () => {
+			const element = await mountWithData({ layout: 'Columns' }, CODED_DATA);
+			await resizeTo(400);
+			expect(byDataId(element, 'tree').getAttribute('role')).toBe('tree');
+			expect(byDataId(element, 'column-head')).toBeNull();
+			expect(itemFor(element, 'Global').querySelector('[data-id="type-badge"]').textContent).toBe('Global');
+			await resizeTo(900);
+			expect(byDataId(element, 'tree').getAttribute('role')).toBe('treegrid');
+		});
+
+		it('draws the org chart three levels deep, with no search or expand buttons', async () => {
+			const element = await mountWithData({ layout: 'Org chart' }, CODED_DATA);
+			expect(byDataId(element, 'chart')).not.toBeNull();
+			expect(byDataId(element, 'tree')).toBeNull();
+			expect(byDataId(element, 'search')).toBeNull();
+			expect(byDataId(element, 'expand-all')).toBeNull();
+			expect(cardsOf(element).map(card => card.card.label)).toEqual([
+				'Global',
+				'Americas',
+				'Canada',
+				'United States',
+				'APAC',
+				'EMEA',
+				'Germany'
+			]);
+			expect(cardFor(element, 'Global').card).toMatchObject({
+				variant: 'root',
+				avatarText: 'GLO',
+				canZoom: false
+			});
+			expect(cardFor(element, 'Americas').card).toMatchObject({
+				variant: 'branch',
+				subtitle: 'CODE-AME · Region',
+				countText: '4 below',
+				canZoom: true
+			});
+			expect(cardFor(element, 'Americas').card.details.map(detail => detail.text)).toEqual(['Yes']);
+			expect(cardFor(element, 'Canada').card.variant).toBe('compact');
+			expect(cardFor(element, 'Global').card.details.map(detail => detail.text)).toEqual(['$1,000', 'No']);
+			expect(cardFor(element, 'Canada').card.details).toHaveLength(1);
+			expect(cardFor(element, 'Americas').classList.contains('chart-card_branch-1')).toBe(true);
+			expect(cardFor(element, 'Global').classList.contains('chart-card_top')).toBe(true);
+		});
+
+		it('renders a card with its avatar, subtitle and zoom button', async () => {
+			const element = await mountWithData({ layout: 'Org chart' }, CODED_DATA);
+			const americas = cardFor(element, 'Americas').shadowRoot;
+			expect(americas.querySelector('[data-id="avatar"]').textContent).toBe('AME');
+			expect(americas.querySelector('[data-id="subtitle"]').textContent).toBe('CODE-AME · Region');
+			expect(americas.querySelector('[data-id="card-link"]')).toBeNull();
+			expect(cardFor(element, 'Global').shadowRoot.querySelector('[data-id="card-zoom"]')).toBeNull();
+		});
+
+		it('zooms in from a card and shows the section banner', async () => {
+			const element = await mountWithData({ layout: 'Org chart' }, CODED_DATA);
+			cardFor(element, 'Americas').shadowRoot.querySelector('[data-id="card-zoom"]').click();
+			await flush();
+			expect(byDataId(element, 'section-banner')).not.toBeNull();
+			expect(cardFor(element, 'Americas').card.variant).toBe('root');
+			expect(cardFor(element, 'Boston Office').card.variant).toBe('compact');
+		});
+
+		it('links cards to their records and navigates on a plain click only', async () => {
+			const element = await mountWithData({ layout: 'Org chart', hierarchySource: 'Records' }, CODED_DATA);
+			const link = cardFor(element, 'Americas').shadowRoot.querySelector('[data-id="card-link"]');
+			expect(link.getAttribute('href')).toBe('/lightning/r/n02/view');
+			link.dispatchEvent(new MouseEvent('click', { button: 0, metaKey: true, bubbles: true, cancelable: true }));
+			expect(navigateCalls).toHaveLength(0);
+			link.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+			expect(navigateCalls).toHaveLength(1);
+			expect(navigateCalls[0].pageReference.attributes.recordId).toBe('n02');
+		});
+
+		it('stacks every card compactly when the component is narrow', async () => {
+			const element = await mountWithData({ layout: 'Org chart' }, CODED_DATA);
+			await resizeTo(360);
+			expect(byDataId(element, 'chart').classList.contains('chart_narrow')).toBe(true);
+			expect(cardsOf(element).every(card => card.card.variant === 'compact')).toBe(true);
+		});
+
+		it('highlights the current record on its card and can drop the branch colors', async () => {
+			const element = await mountWithData({ layout: 'Org chart', recordId: 'n05' }, CODED_DATA);
+			expect(cardFor(element, 'Canada').classList.contains('chart-card_current')).toBe(true);
+			element.hideBranchColors = true;
+			await flush();
+			expect(byDataId(element, 'chart').classList.contains('chart_plain')).toBe(true);
 		});
 	});
 });

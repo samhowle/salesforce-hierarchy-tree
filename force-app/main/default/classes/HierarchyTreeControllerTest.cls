@@ -33,10 +33,16 @@ private class HierarchyTreeControllerTest {
 		return nodeMap;
 	}
 
+	private static HierarchyTreeController.HierarchyResult getColumnHierarchy(String columnFields, String avatarField) {
+		return HierarchyTreeController.getHierarchy(
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, TYPE_FIELD, null, columnFields, avatarField);
+	}
+
 	private static String getErrorMessage(String objectName, String parentField, String labelField, String typeField,
 			String activeField) {
 		try {
-			HierarchyTreeController.getHierarchy(RECORDS, objectName, parentField, labelField, typeField, activeField);
+			HierarchyTreeController.getHierarchy(
+				RECORDS, objectName, parentField, labelField, typeField, activeField, null, null);
 		} catch (AuraHandledException ex) {
 			return ex.getMessage();
 		}
@@ -44,11 +50,21 @@ private class HierarchyTreeControllerTest {
 		return null;
 	}
 
+	private static String getColumnErrorMessage(String columnFields) {
+		try {
+			getColumnHierarchy(columnFields, null);
+		} catch (AuraHandledException ex) {
+			return ex.getMessage();
+		}
+		Assert.fail('The column fields should have been refused, but the query ran.');
+		return null;
+	}
+
 	// Sample
 	@IsTest
 	static void testSampleHierarchy() {
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			HierarchyTreeController.DATA_SOURCE_SAMPLE, null, null, null, null, null);
+			HierarchyTreeController.DATA_SOURCE_SAMPLE, null, null, null, null, null, null, null);
 
 		Map<String, HierarchyTreeController.HierarchyNode> nodeMap = getNodeMap(result);
 		Integer rootCount = 0;
@@ -66,9 +82,24 @@ private class HierarchyTreeControllerTest {
 	}
 
 	@IsTest
+	static void testSampleHasCodesAndColumns() {
+		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
+			HierarchyTreeController.DATA_SOURCE_SAMPLE, null, null, null, null, null, null, null);
+
+		Assert.areEqual(2, result.columns.size(), 'The sample should offer two columns, a code and an owner.');
+		Assert.areEqual('Name', result.labelFieldLabel, 'The sample should label its name column.');
+		for (HierarchyTreeController.HierarchyNode node : result.nodes) {
+			Assert.isTrue(String.isNotBlank(node.avatarText),
+				'Every sample node should carry a code, but ' + node.label + ' does not.');
+			Assert.areEqual(2, node.columnValues.size(), 'Every sample node should carry one value per column.');
+		}
+		Assert.areEqual('GLB-WW', result.nodes[0].avatarText, 'The sample codes should follow the type-code pattern.');
+	}
+
+	@IsTest
 	static void testUnknownDataSourceFallsBackToSample() {
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			'Anything', OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null);
+			'Anything', OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null, null, null);
 
 		Assert.isTrue(result.nodes[0].recordId.startsWith('sample-'), 'An unknown data source should return the sample tree.');
 	}
@@ -79,7 +110,7 @@ private class HierarchyTreeControllerTest {
 		List<Account> accounts = insertAccountTree();
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null, null, null);
 
 		Map<String, HierarchyTreeController.HierarchyNode> nodeMap = getNodeMap(result);
 		Assert.areEqual(4, result.nodes.size(), 'Every account the test inserted should come back as a node.');
@@ -101,7 +132,7 @@ private class HierarchyTreeControllerTest {
 		}
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, TYPE_FIELD, null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, TYPE_FIELD, null, null, null);
 
 		Assert.areEqual(expectedLabel, getNodeMap(result).get(accounts[0].Id).typeLabel,
 			'A picklist type field should come back as its label.');
@@ -112,7 +143,7 @@ private class HierarchyTreeControllerTest {
 		List<Account> accounts = insertAccountTree();
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, 'AccountNumber', null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, 'AccountNumber', null, null, null);
 
 		Assert.areEqual('TOP-1', getNodeMap(result).get(accounts[0].Id).typeLabel,
 			'A type field that is not a picklist should come back as its value.');
@@ -124,7 +155,7 @@ private class HierarchyTreeControllerTest {
 
 		// Account has no active checkbox in every org; IsDeleted is a checkbox every org has, false on every live row.
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, 'IsDeleted');
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, 'IsDeleted', null, null);
 
 		Assert.isFalse(getNodeMap(result).get(accounts[0].Id).isActive,
 			'The active flag should carry the checkbox value, which is false here.');
@@ -135,7 +166,7 @@ private class HierarchyTreeControllerTest {
 		insertAccountTree();
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, ' account ', 'parentid', 'NAME', 'type', '');
+			RECORDS, ' account ', 'parentid', 'NAME', 'type', '', null, null);
 
 		Assert.areEqual(4, result.nodes.size(), 'Object and field names should match whatever their case or spacing.');
 	}
@@ -145,7 +176,7 @@ private class HierarchyTreeControllerTest {
 		List<Account> accounts = insertAccountTree();
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, '', null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, '', null, null, null);
 
 		HierarchyTreeController.HierarchyNode topNode = getNodeMap(result).get(accounts[0].Id);
 		Assert.isNull(topNode.typeLabel, 'A blank type field should leave the type label empty.');
@@ -158,10 +189,123 @@ private class HierarchyTreeControllerTest {
 		HierarchyTreeController.maxNodes = 2;
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null, null, null);
 
 		Assert.areEqual(2, result.nodes.size(), 'The result should stop at the node limit.');
 		Assert.isTrue(result.isTruncated, 'The result should say that more nodes exist than it returned.');
+	}
+
+	// Columns and avatar
+	@IsTest
+	static void testColumnsAreLabelledAndFormatted() {
+		List<Account> accounts = insertAccountTree();
+		accounts[0].AnnualRevenue = 1500000;
+		update accounts[0];
+		String expectedTypeLabel = null;
+		for (Schema.PicklistEntry entry : Account.Type.getDescribe().getPicklistValues()) {
+			if (entry.getValue() == 'Prospect') { expectedTypeLabel = entry.getLabel(); }
+		}
+		String ownerName = [SELECT Name FROM User WHERE Id = :UserInfo.getUserId()].Name;
+
+		HierarchyTreeController.HierarchyResult result = getColumnHierarchy(
+			'Type, AnnualRevenue, OwnerId, Parent.Name, CreatedDate', null);
+
+		List<String> labels = new List<String>();
+		List<String> dataTypes = new List<String>();
+		for (HierarchyTreeController.HierarchyColumn column : result.columns) {
+			labels.add(column.label);
+			dataTypes.add(column.dataType);
+		}
+		Assert.areEqual(new List<String>{
+				Account.Type.getDescribe().getLabel(), Account.AnnualRevenue.getDescribe().getLabel(), 'Owner',
+				'Parent Account', Account.CreatedDate.getDescribe().getLabel() },
+			labels, 'Columns should take field labels, with a lookup named after the relationship.');
+		Assert.areEqual(new List<String>{ 'picklist', 'currency', 'string', 'string', 'datetime' }, dataTypes,
+			'Each column should report its field type, and a lookup the type of the name it shows.');
+		Map<String, HierarchyTreeController.HierarchyNode> nodeMap = getNodeMap(result);
+		List<String> topValues = nodeMap.get(accounts[0].Id).columnValues;
+		Assert.areEqual(expectedTypeLabel, topValues[0], 'A picklist column should show the label.');
+		Assert.areEqual(expectedTypeLabel, nodeMap.get(accounts[0].Id).typeLabel,
+			'The type badge should still read the label when the same field is also a column.');
+		Assert.isTrue(topValues[1] != null && topValues[1] != '1500000' && topValues[1].contains('500'),
+			'A currency column should come back formatted for the user, but was: ' + topValues[1]);
+		Assert.areEqual(ownerName, topValues[2], 'A lookup column should show the related record name.');
+		Assert.isNull(topValues[3], 'A lookup with no related record should leave the value empty.');
+		Assert.areEqual(TOP_NAME, nodeMap.get(accounts[1].Id).columnValues[3],
+			'Parent.Name should read through the lookup.');
+		Assert.isNotNull(topValues[4], 'A date-time column should come back formatted.');
+		Assert.isNull(nodeMap.get(accounts[1].Id).columnValues[1], 'A blank number should come back empty, not as text.');
+	}
+
+	@IsTest
+	static void testRelatedFieldColumn() {
+		insertAccountTree();
+		String ownerAlias = [SELECT Alias FROM User WHERE Id = :UserInfo.getUserId()].Alias;
+
+		HierarchyTreeController.HierarchyResult result = getColumnHierarchy('owner.alias', null);
+
+		Assert.areEqual('Owner ' + User.Alias.getDescribe().getLabel(), result.columns[0].label,
+			'A related field column should be labelled with the relationship and the field.');
+		Assert.areEqual(ownerAlias, result.nodes[0].columnValues[0], 'A related field column should read the related value.');
+	}
+
+	@IsTest
+	static void testRepeatedAndBlankColumnFieldsSkipped() {
+		insertAccountTree();
+
+		HierarchyTreeController.HierarchyResult result = getColumnHierarchy('Name, , name,', null);
+
+		Assert.areEqual(1, result.columns.size(), 'Blank and repeated column fields should be skipped.');
+		Assert.areEqual(TOP_NAME, result.nodes[0].columnValues[0], 'The name column may repeat the label field.');
+	}
+
+	@IsTest
+	static void testAvatarField() {
+		List<Account> accounts = insertAccountTree();
+
+		HierarchyTreeController.HierarchyResult result = getColumnHierarchy(null, 'AccountNumber');
+
+		Map<String, HierarchyTreeController.HierarchyNode> nodeMap = getNodeMap(result);
+		Assert.areEqual('TOP-1', nodeMap.get(accounts[0].Id).avatarText, 'The avatar field should fill the avatar text.');
+		Assert.isNull(nodeMap.get(accounts[1].Id).avatarText, 'A blank avatar field should leave the avatar text empty.');
+		Assert.isTrue(result.columns.isEmpty(), 'Without column fields there should be no columns.');
+	}
+
+	@IsTest
+	static void testTooManyColumnFieldsRefused() {
+		String message = getColumnErrorMessage('Name, Type, Industry, Phone, Website, AccountNumber');
+
+		Assert.isTrue(message.contains('at most 5'), 'More than five column fields should be refused, but got: ' + message);
+	}
+
+	@IsTest
+	static void testUnknownColumnFieldRefused() {
+		String message = getColumnErrorMessage('No_Such_Field__c');
+
+		Assert.isTrue(message.contains('Unknown column field'),
+			'An unknown column should be refused by name, but got: ' + message);
+	}
+
+	@IsTest
+	static void testColumnFieldFollowsOneLookupOnly() {
+		String message = getColumnErrorMessage('Parent.Owner.Name');
+
+		Assert.isTrue(message.contains('one lookup only'), 'A path through two lookups should be refused, but got: ' + message);
+	}
+
+	@IsTest
+	static void testUnknownLookupRefused() {
+		String message = getColumnErrorMessage('Nobody.Name');
+
+		Assert.isTrue(message.contains('Unknown lookup'), 'An unknown relationship should be refused, but got: ' + message);
+	}
+
+	@IsTest
+	static void testUnknownRelatedFieldRefused() {
+		String message = getColumnErrorMessage('Owner.No_Such_Field__c');
+
+		Assert.isTrue(message.contains('Unknown column field'),
+			'An unknown field behind a lookup should be refused, but got: ' + message);
 	}
 
 	// Refusals
@@ -225,7 +369,7 @@ private class HierarchyTreeControllerTest {
 		HierarchyTreeController.ALLOWED_OBJECT_API_NAMES.add('account');
 
 		HierarchyTreeController.HierarchyResult result = HierarchyTreeController.getHierarchy(
-			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null);
+			RECORDS, OBJECT_NAME, PARENT_FIELD, LABEL_FIELD, null, null, null, null);
 
 		Assert.areEqual(4, result.nodes.size(), 'An object on the allow list should be read, whatever the case.');
 	}

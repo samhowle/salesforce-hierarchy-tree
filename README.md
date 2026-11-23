@@ -1,28 +1,42 @@
 # Hierarchy Tree
 
-A Lightning Web Component that draws any object with a lookup to itself as a tree: territories, regions, account
-hierarchies, org units. Names link to their record pages. Any branch can be zoomed into, with a breadcrumb and a
+A Lightning Web Component that draws any object with a lookup to itself as a tree, a tree with columns, or an org
+chart of cards: territories, regions, account hierarchies, org units. Names link to their record pages. Any branch can be zoomed into, with a breadcrumb and a
 "Section view" banner, so a zoomed-in view is never mistaken for the real top. It works on Lightning Home, App and
 Record pages and on Experience Cloud sites (LWR and Aura).
 
 It ships as a generic template. Out of the box it shows a built-in sample tree and needs no objects or data. Point it at
 a real object by setting four design attributes, or by changing their defaults (see [Fill in your schema](#fill-in-your-schema)).
 
-**State, 2026-11-22.** Lint is clean and Jest passes 72 tests with coverage above its floors. In a scratch org,
-everything deploys and the 17 Apex tests pass. The look in Lightning Experience and on an LWR site is still to be
-checked by a person; see [What is proven, and where](#what-is-proven-and-where).
+**State, 2026-11-22.** Lint is clean and Jest passes 86 tests with coverage above its floors. In a scratch org,
+everything deploys and the 27 Apex tests pass. All three layouts were rendered from the real source in a local
+harness. The look in Lightning Experience and on an LWR site is still to be checked by a person; see
+[What is proven, and where](#what-is-proven-and-where).
 
 <!-- Screenshot slot: capture the component in an org, save it as docs/screenshot.png, and replace this line with
      ![Hierarchy Tree](docs/screenshot.png) -->
 
 ## What it does
 
+- **Three layouts** (*Layout*):
+  - *Tree*: one row per record, names only, with the zoom button right after each name and count.
+  - *Columns*: like the standard Account Hierarchy. The name column keeps the indent, chevrons and stripes; the
+    type field and up to five *Column fields* line up beside it, then a "Below" count. Numbers align right and
+    checkboxes read Yes or No.
+  - *Org chart*: for a small hierarchy, such as a leadership page. The top record's card sits above its children's
+    cards, and their children stack under each one; deeper levels are one zoom away. Each card shows an avatar,
+    the name as a link, "code · type", and up to two column values (one on a compact card). The search and expand
+    buttons are hidden; the breadcrumb and section banner stay.
+  - **Narrow spaces.** Below 640 pixels of the component's own width (a sidebar, a phone), Columns shows the plain
+    tree and the org chart stacks into a list of compact cards.
+- **Avatars.** *Avatar field* names a short text field such as a code. A code like REG-EUR shows EUR, the part after
+  the last hyphen, up to five characters; with no code, the avatar shows initials from the name.
 - **Tree.** One row per record, with indent guides showing what each row rolls up to. A chevron opens and closes
   each branch. Expand all and Collapse all buttons cover the whole view. Two levels are open at start
   (`expandDepth`).
 - **Record links.** Each name is a real link to the record page. A plain click navigates inside Lightning or the site.
   Cmd/Ctrl/Shift-click and middle-click open a new tab. Sample data has no record pages, so its names are plain text.
-- **Zoom in.** The magnifier on any row with children re-roots the view there, as does the toolbar button for the
+- **Zoom in.** The magnifier on any row or card with children re-roots the view there, as does the toolbar button for the
   selected row. When zoomed in:
   - a breadcrumb names every level above the view, and each crumb climbs back to that level;
   - a banner reads "Section view: showing ‹name› and the N records below it" and has a *Show full hierarchy* button.
@@ -52,12 +66,13 @@ checked by a person; see [What is proven, and where](#what-is-proven-and-where).
 | Path | What it is | Carry it to a real org? |
 |---|---|---|
 | `force-app/main/default/lwc/hierarchyTree/` | The component: `hierarchyTree.js` (view logic), `hierarchyTreeModel.js` (pure tree functions), `.html`, `.css`, `.js-meta.xml` (design attributes), `__tests__/` (Jest, never deployed) | Yes |
+| `force-app/main/default/lwc/hierarchyTreeCard/` | One org-chart card, used only inside the component | Yes |
 | `force-app/main/default/classes/HierarchyTreeController.cls` | The Apex controller: one cacheable method, sample mode and records mode | Yes |
 | `force-app/main/default/classes/HierarchyTreeControllerTest.cls` | Its tests, written against Account | Yes, after pointing it at your object |
 | `force-app/main/default/permissionsets/Hierarchy_Tree_User` | Apex class access for users who are not admins and for site users | Yes |
 | `force-app/test/jest-mocks/` | A `lightning/navigation` mock that records calls, for Jest only | Yes, if you run Jest |
-| `demo/` | An App page and tab with two instances (sample data and Accounts), plus a permission set for the tab | No, demo only |
-| `scripts/apex/seedSampleHierarchy.apex` | 31 Accounts in four levels, for a scratch org | No, demo only |
+| `demo/` | An App page and tab with four instances (Accounts with columns and as an org chart, the sample as an org chart and a tree), plus a permission set for the tab | No, demo only |
+| `scripts/apex/seedSampleHierarchy.apex` | 31 Accounts in four levels, with codes in AccountNumber and column data, for a scratch org | No, demo only |
 | `config/project-scratch-def.json` | Scratch org with the Communities feature, for site testing | Optional |
 | `package.json`, `jest.config.js`, `eslint.config.js`, `.prettierrc` | Local tooling | Yes, if you run Jest and lint |
 
@@ -78,6 +93,8 @@ Every name below is a placeholder. Swap in the real API names, then follow the "
 | Name field | `Name` | `labelFieldApiName` (already `Name`) |
 | Type or level field (optional badge) | `Type__c` | `default` of `typeFieldApiName`; `TYPE_FIELD` and the picklist value in `testPicklistTypeFieldUsesLabel` |
 | Active checkbox (optional) | `IsActive__c` | `default` of `activeFieldApiName`; the field in `testActiveFieldIsMapped`, with one inactive record in the factory |
+| AOR code (optional avatar and column) | `AOR_Code__c` | *Avatar field* on an org-chart page, and one of the *Column fields*; `testAvatarField` uses `AccountNumber` |
+| Column fields (optional) | for example `AOR_Code__c, OwnerId` | *Column fields* on each page; the column tests use Account fields |
 | Start on real data | `Records` | `default` of `hierarchySource` in the meta file (it starts as `Sample`) |
 
 Notes for the test class:
@@ -85,7 +102,10 @@ Notes for the test class:
   one top record, two children, one grandchild.
 - `testParentFieldMustPointAtSameObject` uses `OwnerId` as a lookup to a different object. If your object has no
   owner (the detail side of a master-detail), use any other lookup.
-- `testTextTypeFieldUsesValue` uses `AccountNumber`. Point it at any text field, or drop it.
+- `testTextTypeFieldUsesValue` and `testAvatarField` use `AccountNumber`. Point them at any text field.
+- The column tests use Account's `Type`, `AnnualRevenue`, `OwnerId`, `Parent.Name`, `CreatedDate` and `Owner.Alias`:
+  a picklist, a currency, a lookup, a field through the parent lookup, a date-time and a field through a lookup.
+  Swap in fields of the same kinds from your object.
 
 Defaults in the meta file only apply when an admin drops the component onto a page. Pages already built keep their own
 values. The `@api` defaults in `hierarchyTree.js` matter only when another component embeds `<c-hierarchy-tree>`.
@@ -132,12 +152,15 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 |---|---|---|
 | Card title | Hierarchy | The card header, also the tree's accessible name |
 | Icon | `standard:hierarchy` | SLDS icon in the header |
+| Layout | Tree | `Tree`, `Columns` or `Org chart`; Columns and Org chart fall back to narrow forms in a narrow space |
 | Data source (`hierarchySource`) | Sample | `Sample` draws the built-in tree; `Records` reads the object below |
 | Object API name (`hierarchyObjectApiName`) | Account | Needs a lookup to itself. Not called `objectApiName`, because record pages fill that one in themselves |
 | Parent field API name | ParentId | The lookup to the same object |
 | Name field API name | Name | Shown as each row's name |
 | Type field API name | Type | Optional badge; a picklist shows its label |
 | Active field API name | (blank) | Optional checkbox; rows where it is false are muted |
+| Column fields | (blank) | Up to five comma-separated fields for the Columns layout and the cards. A lookup shows the related name; `Relationship.Field` reads one field through one lookup, for example `Owner.Alias` |
+| Avatar field API name | (blank) | A short text field, such as a code, for the card avatars |
 | Hide inactive records | off | Removes inactive rows and everything below them |
 | Top record Id | (blank) | Start zoomed in on this record |
 | Lock to the top record | off | Viewers cannot go above the top record |
@@ -154,7 +177,13 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
    - In `Records` mode it resolves every name against the schema before any query runs:
      - the object exists, is readable and is on the allow list, if one is set;
      - the parent field is a lookup to that same object;
-     - each field exists, and the active field is a checkbox.
+     - each field exists, and the active field is a checkbox;
+     - each column field exists. A lookup shows the related record's name (`OwnerId` shows the owner's name), and
+       `Relationship.Field` reads one field through one lookup. A lookup that can point at more than one object,
+       like Owner on most custom objects, offers only Name.
+   - Picklist columns come back as labels through `toLabel()`, and number and date columns as the user would see
+     them, with currency symbols, through `FORMAT()`. Each is aliased, so a field can be both the type badge and a
+     column.
    - The query is built only from the describe's own spelling of each name, so nothing typed into a design attribute
      reaches the SOQL text. It runs in `USER_MODE`, ordered by Id and capped at 2,000 rows (`maxNodes`). Over the cap,
      it returns the first 2,000 and flags `isTruncated`.
@@ -166,8 +195,13 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
    - Counts, search, zoom and keyboard moves all run on that index, with no further server calls.
 3. **Rows are drawn flat.** The template renders only the open part of the view as one list with ARIA levels, which
    avoids a recursive component. At most 500 rows are drawn at once; past that the tree says how many it held back.
-   Record URLs are generated only for rows on screen.
-4. **Styling.** Structural CSS lives in `hierarchyTree.css`, and every color is a styling hook with a fallback. The
+   Record URLs are generated only for rows on screen. The Columns layout reuses the same rows as an ARIA tree grid
+   (rows and grid cells) laid out on one CSS grid.
+4. **The org chart nests the view three levels deep.** `getChartTree` builds the nesting, and `c-hierarchy-tree-card`
+   draws each card. A branch's color reaches its cards through the `--hierarchy-tree-card-color` custom property.
+5. **Narrow is measured, not guessed.** A `ResizeObserver` on the component's body reads its own width, so a narrow
+   region on a wide screen counts as narrow.
+6. **Styling.** Structural CSS lives in `hierarchyTree.css`, and every color is a styling hook with a fallback. The
    six branch colors can be set from outside the component with `--hierarchy-tree-branch-color-1` to `-6`, for
    example in a site's head markup or theme CSS.
 
@@ -183,35 +217,42 @@ page and set the attributes below. On a record page, `recordId` is filled in aut
 
 ## What is proven, and where
 
-**Jest** (72 tests, `npm test`) proves the client side. Coverage is about 94% for `hierarchyTree.js` and 99% for
-`hierarchyTreeModel.js`.
-- The model covers sorting, orphans, cycles, 15- and 18-character Ids, counts, pruning, search, branch numbering
-  and the row cap.
+**Jest** (86 tests, `npm test`) proves the client side. Coverage is about 96% for `hierarchyTree.js`, 99% for
+`hierarchyTreeModel.js` and 100% for `hierarchyTreeCard.js`.
+- The model covers sorting, orphans, cycles, 15- and 18-character Ids, counts, pruning, search, branch numbering,
+  the chart nesting, avatar text and the row cap.
 - The component covers rendering, ARIA attributes, zoom, breadcrumbs, the locked branch, search, level and branch classes,
-  keyboard moves, link clicks and record-page mode.
+  keyboard moves, link clicks and record-page mode. For the layouts it covers the tree grid's headers and cells, the
+  org chart's cards, zoom and navigation from a card, and both narrow fallbacks, with a mocked `ResizeObserver`.
 - Apex is mocked.
 
-**Apex tests** (17 methods) prove the controller in an org:
-- sample shape;
+**Apex tests** (27 methods) prove the controller in an org:
+- sample shape, codes and columns;
+- column labels, types and values: picklist labels, formatted currency and date-time, lookup names, a field through
+  a lookup, blank values;
+- the avatar field;
 - parent mapping;
 - picklist labels and text values;
 - the active flag;
 - case-insensitive names;
 - truncation;
-- every refusal, including the allow list.
+- every refusal, including the allow list and bad column fields (too many, unknown, two lookups deep).
 
 **Only an org proves**, checked in a scratch org on 2026-11-22 (Developer edition, deployed at API 63.0) as recorded
 below:
 
 | # | Claim | Status |
 |---|---|---|
-| 1 | The bundle, classes, permission sets, demo page and tab deploy | RUN: all 13 source files deployed on the first attempt |
-| 2 | Apex tests pass in an org | RUN: 17 of 17 pass, 96% coverage of the controller. The uncovered lines are the query-failure catch and the unreadable object and field paths |
+| 1 | The bundles, classes, permission sets, demo page and tab deploy | RUN: all source deployed, the card bundle and the four-instance demo page included |
+| 2 | Apex tests pass in an org | RUN: 27 of 27 pass, 95% coverage of the controller. The uncovered lines include the query-failure catch, custom `__r` relationships and lookups that can point at several objects, which Account's fields cannot exercise |
 | 3 | The controller reads a real hierarchy | RUN: after the seed script, Records mode on Account returned 32 nodes (31 seeded plus the scratch org's own Account) and 2 roots |
-| 3a | Names link to and open record pages in Lightning Experience | for a person to check on the demo tab |
+| 3a | Columns come back formatted from real records | RUN: with the demo page's five column fields, the top Account read `HLD-HT, Finance, New York, User User, $48,000,000` |
+| 3b | All three layouts render from the real source | RUN locally: a throwaway harness compiled the bundles with the LWC engine (base components and Apex stubbed, not kept in the repo) and drew each layout at 1,000 and 360 pixels |
+| 3c | Names link to and open record pages in Lightning Experience, and the layouts look right there | for a person to check on the demo tab |
 | 4 | The `datasource` picklist shows in Experience Builder | UNVERIFIED |
 | 5 | `NavigationMixin.GenerateUrl` and `Navigate` reach record pages on an LWR site | UNVERIFIED |
 | 6 | The component's own CSS renders the same inside an LWR site's native shadow DOM | UNVERIFIED |
+| 7 | The narrow fallback's `ResizeObserver` runs on an Aura site under Lightning Locker | UNVERIFIED |
 
 **Not tested anywhere yet:** a user without read access to an optional field. The code leaves that field out of the
 query, but no test runs as a restricted user.
@@ -220,6 +261,9 @@ query, but no test runs as a restricted user.
 
 - **Lazy loading** for hierarchies well past 2,000 records: load one level at a time instead of all at once.
 - **Custom Labels:** every string sits in the `LABELS` object at the top of `hierarchyTree.js`, ready to move.
+- **The AOR Code avatar** is still to be worked out: how much of a `{AORType}-{ShortCode}` code the circle shows
+  lives in `getAvatarText` in `hierarchyTreeModel.js`.
+- **Columns from a field set**, managed in Setup, as an alternative to listing fields on each page.
 - **Moving into the sf-lwc library** as `skhHierarchyTree` / `SkhHierarchyTreeController` once its prefix rename
   lands.
 

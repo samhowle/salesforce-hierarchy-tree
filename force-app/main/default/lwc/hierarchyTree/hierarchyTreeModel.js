@@ -6,6 +6,8 @@
  *********************************************************************************************************************/
 
 export const BLANK_LABEL = '(no name)';
+export const CHART_DEPTH = 3;
+export const MAX_AVATAR_LENGTH = 5;
 
 const SALESFORCE_ID_PATTERN = /^[a-zA-Z0-9]{18}$/;
 const ID_KEY_LENGTH = 15;
@@ -19,6 +21,10 @@ export function getIdKey(recordId) {
 	}
 	const text = String(recordId);
 	return SALESFORCE_ID_PATTERN.test(text) ? text.substring(0, ID_KEY_LENGTH) : text;
+}
+
+function getCellText(value) {
+	return value === null || value === undefined ? '' : String(value);
 }
 
 function compareEntries(left, right) {
@@ -103,7 +109,8 @@ function breakCycles(nodeMap) {
 }
 
 /**
- * @param {Array} nodes flat nodes from the controller: { recordId, parentId, label, typeLabel, isActive }
+ * @param {Array} nodes flat nodes from the controller:
+ *        { recordId, parentId, label, typeLabel, isActive, avatarText, columnValues }
  * @return {Object} { nodeMap, childKeyMap, rootKeys }; children and roots sorted by label, then by key
  */
 export function buildHierarchyIndex(nodes) {
@@ -121,6 +128,8 @@ export function buildHierarchyIndex(nodes) {
 			label: label || BLANK_LABEL,
 			typeLabel: node.typeLabel ? String(node.typeLabel) : '',
 			isActive: node.isActive !== false,
+			avatarText: node.avatarText ? String(node.avatarText).trim() : '',
+			columnValues: Array.isArray(node.columnValues) ? node.columnValues.map(getCellText) : [],
 			isCycleBreak: false
 		});
 	});
@@ -188,7 +197,9 @@ export function pruneInactiveBranches(index) {
 			parentId: entry.parentKey,
 			label: entry.label,
 			typeLabel: entry.typeLabel,
-			isActive: entry.isActive
+			isActive: entry.isActive,
+			avatarText: entry.avatarText,
+			columnValues: entry.columnValues
 		}));
 	return buildHierarchyIndex(keptNodes);
 }
@@ -339,6 +350,7 @@ export function getVisibleRows(index, options) {
 				label: entry.label,
 				typeLabel: entry.typeLabel,
 				isActive: entry.isActive,
+				columnValues: entry.columnValues,
 				level: item.level,
 				branchIndex: item.branchIndex,
 				posInSet: item.posInSet,
@@ -357,4 +369,49 @@ export function getVisibleRows(index, options) {
 		}
 	}
 	return { rows, hiddenRowCount };
+}
+
+// Org chart
+/**
+ * The view as nested nodes for the org chart, CHART_DEPTH levels deep: the view roots, their children and their
+ * grandchildren. Deeper levels are reached by zooming in. Branch indexes follow getBranchIndexMap.
+ * @return {Array} [{ key, entry, level, branchIndex, childCount, children }]
+ */
+export function getChartTree(index, viewRootKeys) {
+	const branchIndexMap = getBranchIndexMap(index, viewRootKeys);
+	const buildNode = (key, level, branchIndex) => {
+		const childKeys = getChildKeys(index, key);
+		const children =
+			level < CHART_DEPTH
+				? childKeys.map(childKey =>
+						buildNode(childKey, level + 1, level === 1 ? branchIndexMap.get(childKey) : branchIndex)
+					)
+				: [];
+		return { key, entry: index.nodeMap.get(key), level, branchIndex, childCount: childKeys.length, children };
+	};
+	return viewRootKeys.filter(key => index.nodeMap.has(key)).map(key => buildNode(key, 1, -1));
+}
+
+/**
+ * The text in an org-chart avatar. A code such as REG-EUR shows its last part (EUR); without a code, the initials of
+ * the first two words of the name, or the first two letters of a one-word name.
+ */
+export function getAvatarText(code, label) {
+	const codeText = code ? String(code).trim() : '';
+	if (codeText) {
+		const codeParts = codeText.split('-').filter(part => part.trim());
+		const lastPart = codeParts.length > 0 ? codeParts[codeParts.length - 1].trim() : codeText;
+		return lastPart.substring(0, MAX_AVATAR_LENGTH).toUpperCase();
+	}
+	const words = (label ? String(label) : '')
+		.trim()
+		.split(/\s+/)
+		.filter(word => word);
+	if (words.length === 0) {
+		return '';
+	}
+	if (words.length === 1) {
+		return words[0].substring(0, 2).toUpperCase();
+	}
+	return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
 }
